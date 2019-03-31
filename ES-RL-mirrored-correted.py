@@ -10,11 +10,11 @@ import gym
 import multiprocessing as mp
 import time
 
-N_KID = 10         # half of the training population
+N_KID = 20         # half of the training population
 N_GENERATION = 5000         # training step
 LR = .05                    # learning rate
 SIGMA = .05                 # mutation strength or step size
-N_CORE = mp.cpu_count() * 2 - 8
+N_CORE = mp.cpu_count() - 1
 CONFIG = [
     dict(game="CartPole-v0",
          n_feature=4, n_action=2, continuous_a=[False], ep_max_step=700, eval_threshold=500),
@@ -22,10 +22,10 @@ CONFIG = [
          n_feature=2, n_action=3, continuous_a=[False], ep_max_step=200, eval_threshold=-120),
     dict(game="Pendulum-v0",
          n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180)
-][2]    # choose your game
+][1]    # choose your game
 
 
-def sign(k_id): return -1. if k_id % 2 == 0 else 1.  # mirrored sampling
+def sign(k_id): return 1 if k_id % 2 == 0 else -1
 
 
 class SGD(object):                      # optimizer with momentum
@@ -50,10 +50,13 @@ def params_reshape(shapes, params):     # reshape to be a matrix
 
 def get_reward(shapes, params, env, ep_max_step, continuous_a, seed_and_id=None,):
     # perturb parameters using seed
+    params2 = params.copy()
     if seed_and_id is not None:
         seed, k_id = seed_and_id
         np.random.seed(seed)
-        params += sign(k_id) * SIGMA * np.random.randn(params.size)
+        noise = SIGMA * np.random.randn(params.size)
+        params += noise
+        params2 -= noise
     p = params_reshape(shapes, params)
     # run episode
     s = env.reset()
@@ -65,7 +68,20 @@ def get_reward(shapes, params, env, ep_max_step, continuous_a, seed_and_id=None,
         if env.spec._env_name == 'MountainCar' and s[0] > -0.1: r = 0.
         ep_r += r
         if done: break
-    return ep_r
+    
+    p = params_reshape(shapes, params2)
+    # run episode
+    s = env.reset()
+    ep_r2 = 0.
+    for step in range(ep_max_step):
+        a = get_action(p, s, continuous_a)
+        s, r, done, _ = env.step(a)
+        # mountain car's reward can be tricky
+        if env.spec._env_name == 'MountainCar' and s[0] > -0.1: r = 0.
+        ep_r2 += r
+        if done: break
+    
+    return [ep_r, ep_r2]
 
 
 def get_action(params, x, continuous_a):
@@ -90,19 +106,21 @@ def build_net():
 
 def train(net_shapes, net_params, optimizer, utility, pool):
     # pass seed instead whole noise matrix to parallel will save your time
-    noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)    # mirrored sampling
-    print(noise_seed)
-    print(len(noise_seed))
-    exit()
+    noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32)    # mirrored sampling
+
+    noise_seed_back = noise_seed.repeat(2)
+
     # distribute training in parallel
     jobs = [pool.apply_async(get_reward, (net_shapes, net_params, env, CONFIG['ep_max_step'], CONFIG['continuous_a'],
-                                          [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
-    rewards = np.array([j.get() for j in jobs])
+                                          [noise_seed[k_id], k_id], )) for k_id in range(N_KID)]
+    rewards = np.array([j.get() for j in jobs]).reshape(2*N_KID)
+    # rewards 对应的是 [[+,-],[+,-],[+,-].....]
+
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = np.zeros_like(net_params)       # initialize update values
     for ui, k_id in enumerate(kids_rank):
-        np.random.seed(noise_seed[k_id])                # reconstruct noise using seed
+        np.random.seed(noise_seed_back[k_id])                # reconstruct noise using seed
         cumulative_update += utility[ui] * sign(k_id) * np.random.randn(net_params.size)
 
     gradients = optimizer.get_gradients(cumulative_update/(2*N_KID*SIGMA))
@@ -132,26 +150,29 @@ if __name__ == "__main__":
                 # test trained net without noise
                 net_r = get_reward(net_shapes, net_params, env, CONFIG['ep_max_step'], CONFIG['continuous_a'], None,)
                 # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
-                mar += net_r
+                mar += max(net_r)
+            mar = mar / 5
             print(
                 'Gen: ', g,
-                '| Net_R: %.1f' % mar/5,
+                '| Net_R: %.1f' % mar,
                 '| Kid_avg_R: %.1f' % kid_rewards.mean(),
                 '| Gen_T: %.2f' % (time.time() - t0),)
         if mar >= CONFIG['eval_threshold']: break
     
-    run_times =20
+    run_times =100
 
     for j in range(run_times):
         # test trained net without noise
         net_r = get_reward(net_shapes, net_params, env, CONFIG['ep_max_step'], CONFIG['continuous_a'], None,)
         # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
-        mar += net_r
-        print(
-            'Gen: ', g,
-            '| Net_R: %.1f' % mar/run_times,
-            '| Kid_avg_R: %.1f' % kid_rewards.mean(),
-            '| Gen_T: %.2f' % (time.time() - t0),)
+        mar += max(net_r)
+    mar = mar / run_times
+    print("runing 100 times")
+    print(
+        'Gen: ', g,
+        '| Net_R: %.1f' % mar,
+        '| Kid_avg_R: %.1f' % kid_rewards.mean(),
+        '| Gen_T: %.2f' % (time.time() - t0),)
     # # test
     # print("\nTESTING....")
     # p = params_reshape(net_shapes, net_params)
