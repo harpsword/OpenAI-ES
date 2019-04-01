@@ -10,7 +10,7 @@ import gym
 import multiprocessing as mp
 import time
 
-N_KID = 20         # half of the training population
+N_KID = 70         # half of the training population
 N_GENERATION = 5000         # training step
 LR = .05                    # learning rate
 SIGMA = .05                 # mutation strength or step size
@@ -29,7 +29,7 @@ def sign(k_id): return -1. if k_id % 2 == 0 else 1.  # mirrored sampling
 
 
 class SGD(object):                      # optimizer with momentum
-    def __init__(self, params, learning_rate, momentum=0.9):
+    def __init__(self, params, learning_rate, momentum=0):
         self.v = np.zeros_like(params).astype(np.float32)
         self.lr, self.momentum = learning_rate, momentum
 
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     mar = None      # moving average reward
     for g in range(N_GENERATION):
         t0 = time.time()
-        # optimizer.zero_grad()
+        optimizer.zero_grad()
         net_params, kid_rewards = train(net_shapes, net_params, optimizer, utility, pool)
 
         if g % 20 == 0:

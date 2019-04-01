@@ -44,6 +44,7 @@ def retry_get(pipe, key, tries=300, base_delay=4.):
     for i in range(tries):
         # Try to (m)get
         if isinstance(key, (list, tuple)):
+            # 批量读取
             vals = pipe.mget(key)
             if all(v is not None for v in vals):
                 return vals
@@ -138,6 +139,8 @@ class WorkerClient:
 
     def get_experiment(self):
         # Grab experiment info
+        # retry_get(self.local_redis, EXP_KEY) 返回的应该是 pickle文件名
+        # deserialize 加载 保存的pickle文件
         exp = deserialize(retry_get(self.local_redis, EXP_KEY))
         logger.info('[worker] Experiment: {}'.format(exp))
         return exp

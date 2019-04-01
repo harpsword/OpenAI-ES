@@ -22,7 +22,7 @@ CONFIG = [
          n_feature=2, n_action=3, continuous_a=[False], ep_max_step=200, eval_threshold=-120),
     dict(game="Pendulum-v0",
          n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180)
-][1]    # choose your game
+][2]    # choose your game
 
 
 def sign(k_id): return 1 if k_id % 2 == 0 else -1
@@ -151,6 +151,7 @@ if __name__ == "__main__":
                 net_r = get_reward(net_shapes, net_params, env, CONFIG['ep_max_step'], CONFIG['continuous_a'], None,)
                 # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
                 mar += max(net_r)
+                # print(net_r)
             mar = mar / 5
             print(
                 'Gen: ', g,
