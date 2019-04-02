@@ -1,17 +1,27 @@
 
 '''
+
+Please make sure OMP_NUM_THREADS=1
+or run 
+
+export OMP_NUM_THREADS=1
+
 example of distributed ES proposed by OpenAI.
 Details can be found in : https://arxiv.org/abs/1703.03864
 '''
+import pickle
+import click
 import gym
 import numpy as np
 import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.multiprocessing as mp
+import multiprocessing as mp
 
 from torchvision import transforms
+
+# torch.set_num_threads(1)
 
 trans=transforms.Compose(
     [
@@ -20,7 +30,7 @@ trans=transforms.Compose(
     ])
 
 CONFIG = [
-    dict(game='Assault-v0', observation=(250, 160), n_action=7, ep_max_step=800,eval_threshold=500),
+    dict(game='Assault-v0', observation=(250, 160), n_action=7, ep_max_step=800,eval_threshold=2000),
     dict(game="CartPole-v0",
          n_feature=4, n_action=2, continuous_a=[False], ep_max_step=700, eval_threshold=500),
     dict(game="MountainCar-v0",
@@ -31,13 +41,13 @@ CONFIG = [
 
 N_KID = 20         # half of the training population
 N_POPULATION = 2*N_KID
-N_GENERATION = 1000         # training step
+N_GENERATION = 5000         # training step
 LR = 0.05
 SIGMA = 0.05
 N_ACTION = 7
 # N_CORE = mp.cpu_count() * 2 - 8
 # N_CORE = mp.cpu_count() - 1
-N_CORE = 2
+N_CORE = 40
 
 class SGD(object): 
 
@@ -129,8 +139,9 @@ def train(model, optimizer, utility, pool):
     jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],
                                           [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
     rewards = np.array([j.get() for j in jobs])
-    print(rewards)
+    
     # rewards = [get_reward(model, env, CONFIG['ep_max_step'], None,)]
+    # print(rewards)
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = {}       # initialize update values
@@ -146,7 +157,13 @@ def train(model, optimizer, utility, pool):
     optimizer.update_model_parameters(model, cumulative_update)
     return model, rewards
 
-if __name__ == '__main__':
+@click.command()
+@click.argument('namemark')
+def main(namemark):
+    experiment_record = {}
+    experiment_record['kid_rewards'] = []
+    experiment_record['test_rewards'] = []
+
     device = torch.device("cpu")
     model = Net().to(device)
     # model.share_memory()
@@ -165,16 +182,24 @@ if __name__ == '__main__':
     for g in range(N_GENERATION):
         t0 = time.time()
         model, kid_rewards = train(model, optimizer, utility, pool)
+        experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
+        # print(
+        #         'Gen: ', g,
+        #         # '| Net_R: %.1f' % mar,
+        #         '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
+        #         '| Gen_T: %.2f' % (time.time() - t0),)
 
-        # if g % 20 == 0:
-        if True:
+        if g % 40 == 0:
+        # if True:
+            test_times = 5
             mar = 0
-            for j in range(5):
+            for j in range(test_times):
                 # test trained net without noises
                 net_r = get_reward(model, env, CONFIG['ep_max_step'], None,)
                 # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
                 mar += net_r
-            mar = mar / 5
+            mar = mar / test_times
+            experiment_record['test_rewards'].append([g, mar])
             print(
                 'Gen: ', g,
                 '| Net_R: %.1f' % mar,
@@ -196,3 +221,11 @@ if __name__ == '__main__':
         '| Net_R: %.1f' % mar,
         '| Kid_avg_R: %.1f' % kid_rewards.mean(),
         '| Gen_T: %.2f' % (time.time() - t0),)
+
+    # ---------------SAVE---------
+    torch.save(model.state_dict(), CONFIG['game']+str(namemark)+".pt")
+    with open("experiment_record"+str(namemark)+".pickle", "wb") as f:
+        pickle.dump(experiment_record, f)
+
+if __name__ == '__main__':
+    main()    
