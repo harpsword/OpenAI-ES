@@ -6,21 +6,22 @@ or run
 
 export OMP_NUM_THREADS=1
 
-
 example of distributed ES proposed by OpenAI.
 Details can be found in : https://arxiv.org/abs/1703.03864
 '''
+import pickle
+import click
 import gym
 import numpy as np
 import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.multiprocessing as mp
+import multiprocessing as mp
 
 from torchvision import transforms
 
-torch.set_num_threads(1)
+# torch.set_num_threads(1)
 
 trans=transforms.Compose(
     [
@@ -29,7 +30,7 @@ trans=transforms.Compose(
     ])
 
 CONFIG = [
-    dict(game='Assault-v0', observation=(250, 160), n_action=7, ep_max_step=800,eval_threshold=2000),
+    dict(game='Assault-v0', observation=(250, 160), n_action=7, ep_max_step=1000,eval_threshold=2000),
     dict(game="CartPole-v0",
          n_feature=4, n_action=2, continuous_a=[False], ep_max_step=700, eval_threshold=500),
     dict(game="MountainCar-v0",
@@ -38,15 +39,15 @@ CONFIG = [
          n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180)
 ][0]    # choose your game
 
-N_KID = 20         # half of the training population
+N_KID = 22         # half of the training population
 N_POPULATION = 2*N_KID
-N_GENERATION = 1000         # training step
+N_GENERATION = 5000         # training step
 LR = 0.05
 SIGMA = 0.05
 N_ACTION = 7
 # N_CORE = mp.cpu_count() * 2 - 8
-# N_CORE = mp.cpu_count() - 1
-N_CORE = 2
+N_CORE = mp.cpu_count() - 1
+# N_CORE = 40
 
 class SGD(object): 
 
@@ -78,7 +79,6 @@ class SGD(object):
                     tmp = getattr(tmp, attr_value)
                 tmp.add_(self.lr*self.v[name])
 
-
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -104,6 +104,34 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
+class Net2(nn.Module):
+    def __init__(self):
+        super(Net2, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=(0,1))
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=(1,1))
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=(0,1))
+        self.conv4 = nn.Conv2d(64, 64, kernel_size=3, padding=(0, 1))
+        self.conv5 = nn.Conv2d(64, 64, kernel_size=3, padding=(0,0))
+        # self.conv4 = nn.Conv2d(20, 40, kernel_size=3, padding=(0,1))
+        # self.conv3_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(6*4*64, 100)
+        self.fc2 = nn.Linear(100, N_ACTION)
+
+    def forward(self, x):
+        # print(x.shape)
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        # print(x.shape)
+        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        # print(x.shape)
+        x = F.relu(F.max_pool2d(self.conv3(x), 2))
+        # print(x.shape)
+        x = F.relu(F.max_pool2d(self.conv4(x), 2))
+        x = F.relu(F.max_pool2d(self.conv5(x), 2))
+        x = x.view(-1, 24*64)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return F.softmax(x, dim=1)
+
 def sign(k_id): return 1. if k_id % 2 == 0 else -1.  # mirrored sampling
 
 def get_reward(model, env, ep_max_step, seed_and_id=None):
@@ -118,15 +146,27 @@ def get_reward(model, env, ep_max_step, seed_and_id=None):
                 tmp.add_(torch.randn_like(params)*SIGMA*sign(k_id))
     observation = env.reset()
     ep_r = 0.
-    for step in range(ep_max_step):
-        # print(trans(observation).size())
-        # print(type(observation))
-        action = model(trans(observation).reshape(1, 3, 250, 160)).argmax().item()
-        # print(action)
-        observation, reward , done, _ = env.step(action)
-        ep_r += reward
-        if done:
-            break
+    if ep_max_step is None:
+        while True:
+        # for step in range(ep_max_step):
+            # print(trans(observation).size())
+            # print(type(observation))
+            action = model(trans(observation).reshape(1, 3, 250, 160)).argmax().item()
+            # print(action)
+            observation, reward , done, _ = env.step(action)
+            ep_r += reward
+            if done:
+                break
+    else:
+        for step in range(ep_max_step):
+            # print(trans(observation).size())
+            # print(type(observation))
+            action = model(trans(observation).reshape(1, 3, 250, 160)).argmax().item()
+            # print(action)
+            observation, reward , done, _ = env.step(action)
+            ep_r += reward
+            if done:
+                break
     return ep_r
 
 def train(model, optimizer, utility, pool):
@@ -135,12 +175,12 @@ def train(model, optimizer, utility, pool):
     noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)   
 
     # distribute training in parallel
-    # jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],
-    #                                       [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
-    # rewards = np.array([j.get() for j in jobs])
+    jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],
+                                          [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
+    rewards = np.array([j.get() for j in jobs])
     
-    rewards = [get_reward(model, env, CONFIG['ep_max_step'], None,)]
-    print(rewards)
+    # rewards = [get_reward(model, env, CONFIG['ep_max_step'], None,)]
+    # print(rewards)
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = {}       # initialize update values
@@ -156,9 +196,15 @@ def train(model, optimizer, utility, pool):
     optimizer.update_model_parameters(model, cumulative_update)
     return model, rewards
 
-if __name__ == '__main__':
+@click.command()
+@click.argument('namemark')
+def main(namemark):
+    experiment_record = {}
+    experiment_record['kid_rewards'] = []
+    experiment_record['test_rewards'] = []
+
     device = torch.device("cpu")
-    model = Net().to(device)
+    model = Net2().to(device)
     # model.share_memory()
 
     # utility instead reward for update parameters (rank transformation)
@@ -168,21 +214,20 @@ if __name__ == '__main__':
     utility = util_ / util_.sum() - 1 / base
 
     # training 
-    env = gym.make(CONFIG['game']).unwrapped
     optimizer = SGD(model.named_parameters(), LR)
     pool = mp.Pool(processes=N_CORE)
     mar = None      # moving average reward
     for g in range(N_GENERATION):
         t0 = time.time()
         model, kid_rewards = train(model, optimizer, utility, pool)
+        experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
+        # print(
+        #         'Gen: ', g,
+        #         # '| Net_R: %.1f' % mar,
+        #         '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
+        #         '| Gen_T: %.2f' % (time.time() - t0),)
 
-        print(
-                'Gen: ', g,
-                # '| Net_R: %.1f' % mar,
-                '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
-                '| Gen_T: %.2f' % (time.time() - t0),)
-
-        if g % 50 == 0:
+        if g % 40 == 0:
         # if True:
             test_times = 5
             mar = 0
@@ -192,6 +237,7 @@ if __name__ == '__main__':
                 # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
                 mar += net_r
             mar = mar / test_times
+            experiment_record['test_rewards'].append([g, mar])
             print(
                 'Gen: ', g,
                 '| Net_R: %.1f' % mar,
@@ -213,3 +259,12 @@ if __name__ == '__main__':
         '| Net_R: %.1f' % mar,
         '| Kid_avg_R: %.1f' % kid_rewards.mean(),
         '| Gen_T: %.2f' % (time.time() - t0),)
+
+    # ---------------SAVE---------
+    torch.save(model.state_dict(), CONFIG['game']+str(namemark)+".pt")
+    with open("experiment_record"+str(namemark)+".pickle", "wb") as f:
+        pickle.dump(experiment_record, f)
+
+if __name__ == '__main__':
+    env = gym.make(CONFIG['game']).unwrapped
+    main()    
