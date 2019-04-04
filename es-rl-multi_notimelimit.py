@@ -41,7 +41,7 @@ CONFIG = [
 
 N_KID = 22         # half of the training population
 N_POPULATION = 2*N_KID
-N_GENERATION = 5000         # training step
+N_GENERATION = 40000         # training step
 LR = 0.05
 SIGMA = 0.05
 N_ACTION = 7
