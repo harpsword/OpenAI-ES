@@ -100,7 +100,7 @@ class Net(nn.Module):
         # print(x.shape)
         x = x.view(-1, 600*20)
         x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
+        # x = F.dropout(x, training=self.training)
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
