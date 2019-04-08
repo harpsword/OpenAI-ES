@@ -18,7 +18,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.multiprocessing as mp
-# mp.set_sharing_strategy('file_system')
+mp.set_sharing_strategy('file_system')
+
 
 from torchvision import transforms
 
@@ -89,16 +90,22 @@ class Net(nn.Module):
         self.conv3 = nn.Conv2d(10, 20, kernel_size=3, padding=(0,1))
         # self.conv4 = nn.Conv2d(20, 40, kernel_size=3, padding=(0,1))
         # self.conv3_drop = nn.Dropout2d()
+        self.bn1 = nn.BatchNorm2d(6)
+        self.bn2 = nn.BatchNorm2d(10)
+        self.bn3 = nn.BatchNorm2d(20)
         self.fc1 = nn.Linear(600*20, 50)
         self.fc2 = nn.Linear(50, N_ACTION)
 
     def forward(self, x):
         # print(x.shape)
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(self.bn1(F.max_pool2d(self.conv1(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
         # print(x.shape)
-        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        x = F.relu(self.bn2(F.max_pool2d(self.conv2(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv2(x), 2))
         # print(x.shape)
-        x = F.relu(F.max_pool2d(self.conv3(x), 2))
+        x = F.relu(self.bn3(F.max_pool2d(self.conv3(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv3(x), 2))
         # print(x.shape)
         x = x.view(-1, 600*20)
         x = F.relu(self.fc1(x))

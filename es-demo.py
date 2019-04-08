@@ -1,5 +1,11 @@
 
 import numpy as np
+import torch
+import torch.nn as nn
+
+nn.Parameter
+torch.Tensor
+torch.autograd.Variable()
 
 N_KID = 10
 N_GENERATION = 5000
