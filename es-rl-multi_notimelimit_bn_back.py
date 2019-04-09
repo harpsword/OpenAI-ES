@@ -1,5 +1,6 @@
 
 '''
+
 es-rl-multi_notimelimit_np_random
 Notice:
 multi-core
@@ -23,7 +24,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.multiprocessing as mp
-# mp.set_sharing_strategy('file_system')
+mp.set_sharing_strategy('file_system')
+
 
 from torchvision import transforms
 
@@ -36,7 +38,7 @@ trans=transforms.Compose(
     ])
 
 CONFIG = [
-    dict(game='Assault-v0', observation=(250, 160), n_action=7, ep_max_step=1000,eval_threshold=2000),
+    dict(game='Assault-v0', n_feature=None, observation=(250, 160), n_action=7, ep_max_step=None,eval_threshold=2000),
     dict(game="CartPole-v0",
          n_feature=4, n_action=2, continuous_a=[False], ep_max_step=700, eval_threshold=500),
     dict(game="MountainCar-v0",
@@ -94,16 +96,22 @@ class Net(nn.Module):
         self.conv3 = nn.Conv2d(10, 20, kernel_size=3, padding=(0,1))
         # self.conv4 = nn.Conv2d(20, 40, kernel_size=3, padding=(0,1))
         # self.conv3_drop = nn.Dropout2d()
+        self.bn1 = nn.BatchNorm2d(6)
+        self.bn2 = nn.BatchNorm2d(10)
+        self.bn3 = nn.BatchNorm2d(20)
         self.fc1 = nn.Linear(600*20, 50)
         self.fc2 = nn.Linear(50, N_ACTION)
 
     def forward(self, x):
         # print(x.shape)
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(self.bn1(F.max_pool2d(self.conv1(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
         # print(x.shape)
-        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        x = F.relu(self.bn2(F.max_pool2d(self.conv2(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv2(x), 2))
         # print(x.shape)
-        x = F.relu(F.max_pool2d(self.conv3(x), 2))
+        x = F.relu(self.bn3(F.max_pool2d(self.conv3(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv3(x), 2))
         # print(x.shape)
         x = x.view(-1, 600*20)
         x = F.relu(self.fc1(x))
@@ -111,20 +119,31 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
+class SimpleNet(nn.Module):
+    def __init__(self):
+        return super(SimpleNet, self).__init__()
+        self.fc1 = nn.Linear(CONFIG['n_feature'], 30)
+        self.fc2 = nn.Linear(30, 20)
+        self.fc3 = nn.Linear(20, CONFIG['n_action'])
+
+    def forward(self, input):
+        input = F.tanh(self.fc1(input))
+        input = F.tanh(self.fc2(input))
+        input = self.fc3(input)
+        return F.softmax(input, dim=1)
+
 def sign(k_id): return 1. if k_id % 2 == 0 else -1.  # mirrored sampling
 
 def get_reward(model, env, ep_max_step, seed_and_id=None):
     if seed_and_id is not None:
         seed, k_id = seed_and_id
-        # torch.manual_seed(seed)
-        np.random.seed(seed)
+        torch.manual_seed(seed)
         with torch.no_grad():
             for name, params in model.named_parameters():
                 tmp = model
                 for attr_value in name.split('.'):
                     tmp = getattr(tmp, attr_value)
-                noise = torch.tensor(np.random.normal(0,1,tmp.size()), dtype=torch.float)
-                tmp.add_(noise*SIGMA*sign(k_id))
+                tmp.add_(torch.randn_like(params)*SIGMA*sign(k_id))
     observation = env.reset()
     ep_r = 0.
     if ep_max_step is None:
@@ -167,14 +186,11 @@ def train(model, optimizer, utility, pool):
     cumulative_update = {}       # initialize update values
     for ui, k_id in enumerate(kids_rank):
         # reconstruct noise using seed
-        # torch.manual_seed(noise_seed[k_id])
-        np.random.seed(noise_seed[k_id])
+        torch.manual_seed(noise_seed[k_id])
         for name, params in model.named_parameters():
             if not name in cumulative_update.keys():
                 cumulative_update[name] = torch.zeros_like(params, dtype=torch.float)
-            noise = torch.tensor(np.random.normal(0,1,params.size()), dtype=torch.float)
-            cumulative_update[name].add_(utility[ui] * sign(k_id) * noise)
-            # cumulative_update[name].add_(utility[ui] * sign(k_id) * torch.randn_like(params))
+            cumulative_update[name].add_(utility[ui] * sign(k_id) * torch.randn_like(params))
     for name, params in cumulative_update.items():
         cumulative_update[name].mul_(1/(2*N_KID*SIGMA))
     optimizer.update_model_parameters(model, cumulative_update)

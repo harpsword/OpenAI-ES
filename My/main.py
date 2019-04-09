@@ -72,6 +72,11 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma):
                 '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
                 '| Gen_T: %.2f' % (time.time() - t0),)
         if mar >= CONFIG['eval_threshold']: break
+
+        if (g-1) % 1000 == 1000 -1:
+            torch.save(model.state_dict(), CONFIG['game']+str(namemark)+"genetation"+str(g)+".pt")
+            with open("experiment_record"+str(namemark)+"genetation"+str(g)+".pickle", "wb") as f:
+                pickle.dump(experiment_record, f)
     
     run_times =20
 
