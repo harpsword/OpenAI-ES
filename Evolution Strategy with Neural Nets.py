@@ -14,15 +14,15 @@ N_KID = 20         # half of the training population
 N_GENERATION = 5000         # training step
 LR = .05                    # learning rate
 SIGMA = .05                 # mutation strength or step size
-N_CORE = mp.cpu_count() * 2 - 8
+N_CORE = min(mp.cpu_count() - 1, 2*N_KID)
 CONFIG = [
     dict(game="CartPole-v0",
-         n_feature=4, n_action=2, continuous_a=[False], ep_max_step=700, eval_threshold=500),
+         n_feature=4, n_action=2, continuous_a=[False], ep_max_step=700, eval_threshold=700),
     dict(game="MountainCar-v0",
          n_feature=2, n_action=3, continuous_a=[False], ep_max_step=200, eval_threshold=-120),
     dict(game="Pendulum-v0",
          n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180)
-][2]    # choose your game
+][0]    # choose your game
 
 
 def sign(k_id): return -1. if k_id % 2 == 0 else 1.  # mirrored sampling
@@ -91,7 +91,7 @@ def build_net():
     return [s0, s1, s2], np.concatenate((p0, p1, p2))
 
 
-def train(net_shapes, net_params, optimizer, utility, pool):
+def train(net_shapes, net_params, optimizer, utility, pool, test=False):
     # pass seed instead whole noise matrix to parallel will save your time
     noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)    # mirrored sampling
 
@@ -103,10 +103,47 @@ def train(net_shapes, net_params, optimizer, utility, pool):
 
     cumulative_update = np.zeros_like(net_params)       # initialize update values
     for ui, k_id in enumerate(kids_rank):
+        # print("id:", ui)
         np.random.seed(noise_seed[k_id])                # reconstruct noise using seed
-        cumulative_update += utility[ui] * sign(k_id) * np.random.randn(net_params.size)
-
+        noise = np.random.randn(net_params.size)
+        # r = params_reshape(net_shapes, noise)
+        # for array_i in r:
+        #     print("noise")
+        #     print(array_i.shape)
+        #     print(array_i.mean())
+        #     print(array_i.std())
+        cumulative_update += utility[ui] * sign(k_id) * noise
+    if test:
+        print("rewards:")
+        print(rewards)
+        print(utility)
+        # print(cumulative_update)
+        print(net_shapes)
+        r  = params_reshape(net_shapes, cumulative_update)
+        # print(r)
+        for i in range(len(r)):
+            print(r[i].shape)
+            print(r[i].mean())
+            print(r[i].std())
+        print("after")
+        print(2*N_KID*SIGMA)
+        print(1/(2*N_KID*SIGMA))
+        r  = params_reshape(net_shapes, cumulative_update/(2*N_KID*SIGMA))
+        # print(r)
+        for i in range(len(r)):
+            print(r[i].shape)
+            print(r[i].mean())
+            print(r[i].std())
     gradients = optimizer.get_gradients(cumulative_update/(2*N_KID*SIGMA))
+    if test:
+        r  = params_reshape(net_shapes, net_params + gradients)
+        # print(r)
+        print("check model")
+        for i in range(len(r)):
+            print(r[i].shape)
+            print(r[i].mean())
+            print(r[i].std())
+        time.sleep(300)
     return net_params + gradients, rewards
 
 
@@ -126,7 +163,10 @@ if __name__ == "__main__":
     for g in range(N_GENERATION):
         t0 = time.time()
         # optimizer.zero_grad()
-        net_params, kid_rewards = train(net_shapes, net_params, optimizer, utility, pool)
+        if g == 700:
+            net_params, kid_rewards = train(net_shapes, net_params, optimizer, utility, pool, test=True)
+        else:
+            net_params, kid_rewards = train(net_shapes, net_params, optimizer, utility, pool)
 
         if g % 20 == 0:
             mar = 0
