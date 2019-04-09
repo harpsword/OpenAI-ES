@@ -61,7 +61,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma):
             mar = 0
             for j in range(test_times):
                 # test trained net without noises
-                net_r = get_reward(model, env, CONFIG['ep_max_step'], sigma, None,)
+                net_r = get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, None,)
                 # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
                 mar += net_r
             mar = mar / test_times
@@ -77,7 +77,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma):
 
     for j in range(run_times):
         # test trained net without noise
-        net_r = get_reward(model, env, CONFIG['ep_max_step'], sigma, None,)
+        net_r = get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, None,)
         # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
         mar += net_r
     mar = mar / run_times

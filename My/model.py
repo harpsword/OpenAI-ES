@@ -59,10 +59,12 @@ class SimpleNet(nn.Module):
         self.fc3 = nn.Linear(20, CONFIG['n_action'])
 
     def forward(self, input):
+        input = torch.Tensor(input)
         input = input.view(1, -1)
         input = torch.tanh(self.fc1(input))
         input = torch.tanh(self.fc2(input))
         input = self.fc3(input)
+        # input = input[0]
         return F.softmax(input, dim=1)
 
 

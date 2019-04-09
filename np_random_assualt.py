@@ -1,5 +1,10 @@
 
 '''
+es-rl-multi_notimelimit_np_random
+Notice:
+multi-core
+no time limit
+use np.random.normal to represent torch.randn_like
 
 Please make sure OMP_NUM_THREADS=1
 or run 
@@ -38,16 +43,16 @@ CONFIG = [
          n_feature=2, n_action=3, continuous_a=[False], ep_max_step=200, eval_threshold=-120),
     dict(game="Pendulum-v0",
          n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180)
-][1]    # choose your game
+][0]    # choose your game
 
-N_KID = 20         # half of the training population
+N_KID = 22         # half of the training population
 N_POPULATION = 2*N_KID
 N_GENERATION = 40000         # training step
 LR = 0.05
 SIGMA = 0.05
 N_ACTION = 7
 # N_CORE = mp.cpu_count() * 2 - 8
-N_CORE = min(mp.cpu_count() - 1, N_POPULATION)
+N_CORE = mp.cpu_count() - 1
 # N_CORE = 40
 
 class SGD(object): 
@@ -106,49 +111,20 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
-class SimpleNet(nn.Module):
-    '''
-    input: (N, n_feature)
-    output: (N)
-    '''
-    def __init__(self, CONFIG):
-        super(SimpleNet, self).__init__()
-        self.fc1 = nn.Linear(CONFIG['n_feature'], 30)
-        self.fc2 = nn.Linear(30, 20)
-        self.fc3 = nn.Linear(20, CONFIG['n_action'])
-
-    def forward(self, input):
-        input = input.view(1, -1)
-        input = torch.tanh(self.fc1(input))
-        input = torch.tanh(self.fc2(input))
-        input = self.fc3(input)
-        # print(F.softmax(input, dim=1))
-        # exit()
-        # print(input)
-        input = input[0]
-        return F.softmax(input, dim=0)
-
 def sign(k_id): return 1. if k_id % 2 == 0 else -1.  # mirrored sampling
 
-def get_reward(base_model, env, ep_max_step, seed_and_id=None):
+def get_reward(model, env, ep_max_step, seed_and_id=None):
     if seed_and_id is not None:
         seed, k_id = seed_and_id
+        # torch.manual_seed(seed)
         np.random.seed(seed)
-        model = SimpleNet(CONFIG)
-        model.load_state_dict(base_model.state_dict())
-        # model = base_model
         with torch.no_grad():
             for name, params in model.named_parameters():
                 tmp = model
                 for attr_value in name.split('.'):
                     tmp = getattr(tmp, attr_value)
                 noise = torch.tensor(np.random.normal(0,1,tmp.size()), dtype=torch.float)
-                
-                # print(torch.typename(noise))
-                # print(torch.typename(tmp))
                 tmp.add_(noise*SIGMA*sign(k_id))
-    else:
-        model = base_model
     observation = env.reset()
     ep_r = 0.
     if ep_max_step is None:
@@ -156,8 +132,7 @@ def get_reward(base_model, env, ep_max_step, seed_and_id=None):
         # for step in range(ep_max_step):
             # print(trans(observation).size())
             # print(type(observation))
-
-            action = model(torch.Tensor(observation)).argmax().item()
+            action = model(trans(observation).reshape(1, 3, 250, 160)).argmax().item()
             # print(action)
             observation, reward , done, _ = env.step(action)
             ep_r += reward
@@ -167,11 +142,7 @@ def get_reward(base_model, env, ep_max_step, seed_and_id=None):
         for step in range(ep_max_step):
             # print(trans(observation).size())
             # print(type(observation))
-            # a = model(torch.Tensor(observation))
-            # # print(a)
-            # # print(a.argmax())
-            # # exit()
-            action = model(torch.Tensor(observation)).argmax().item()
+            action = model(trans(observation).reshape(1, 3, 250, 160)).argmax().item()
             # print(action)
             observation, reward , done, _ = env.step(action)
             ep_r += reward
@@ -179,7 +150,7 @@ def get_reward(base_model, env, ep_max_step, seed_and_id=None):
                 break
     return ep_r
 
-def train(model, optimizer, utility, pool, env, test=False):
+def train(model, optimizer, utility, pool):
     # pass seed instead whole noise matrix to parallel will save your time
     # mirrored sampling
     noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)   
@@ -191,59 +162,33 @@ def train(model, optimizer, utility, pool, env, test=False):
     
     # rewards = [get_reward(model, env, CONFIG['ep_max_step'], None,)]
     # print(rewards)
-    kids_rank = np.argsort(rewards)[::-1]        # rank kid id by reward
+    kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = {}       # initialize update values
     for ui, k_id in enumerate(kids_rank):
-        # print("id:", ui)
         # reconstruct noise using seed
         # torch.manual_seed(noise_seed[k_id])
         np.random.seed(noise_seed[k_id])
         for name, params in model.named_parameters():
             if not name in cumulative_update.keys():
                 cumulative_update[name] = torch.zeros_like(params, dtype=torch.float)
-            # noise = torch.randn_like(params)
             noise = torch.tensor(np.random.normal(0,1,params.size()), dtype=torch.float)
-            # print("noise")
-            # print(noise.mean())
-            # print(noise.std())
-            # cumulative_update[name].add_(utility[ui] * sign(k_id) * torch.randn_like(params))
             cumulative_update[name].add_(utility[ui] * sign(k_id) * noise)
-    if test:
-        print("rewards:")
-        print(rewards)
-        print(utility)
-        # print(cumulative_update)
-        for name, params in cumulative_update.items():
-            print(name)
-            print(params.size())
-            print(params.mean())
-            print(params.std())
-        
+            # cumulative_update[name].add_(utility[ui] * sign(k_id) * torch.randn_like(params))
     for name, params in cumulative_update.items():
         cumulative_update[name].mul_(1/(2*N_KID*SIGMA))
     optimizer.update_model_parameters(model, cumulative_update)
-    if test:
-        print("check model")
-        for name, params in model.named_parameters():
-            print(name)
-            print(params.size())
-            print(params.mean())
-            print(params.std())
-            
-        time.sleep(300)
     return model, rewards
 
 @click.command()
 @click.argument('namemark')
 def main(namemark):
-    env = gym.make(CONFIG['game']).unwrapped
     experiment_record = {}
     experiment_record['kid_rewards'] = []
     experiment_record['test_rewards'] = []
 
     device = torch.device("cpu")
-    model = SimpleNet(CONFIG).to(device)
+    model = Net().to(device)
     # model.share_memory()
 
     # utility instead reward for update parameters (rank transformation)
@@ -258,10 +203,7 @@ def main(namemark):
     mar = None      # moving average reward
     for g in range(N_GENERATION):
         t0 = time.time()
-        if g== 700:
-            model, kid_rewards = train(model, optimizer, utility, pool, env, test=True)
-        else:
-            model, kid_rewards = train(model, optimizer, utility, pool, env)
+        model, kid_rewards = train(model, optimizer, utility, pool)
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         # print(
         #         'Gen: ', g,
@@ -269,7 +211,7 @@ def main(namemark):
         #         '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
         #         '| Gen_T: %.2f' % (time.time() - t0),)
 
-        if g % 20 == 0:
+        if g % 40 == 0:
         # if True:
             test_times = 5
             mar = 0
@@ -308,5 +250,5 @@ def main(namemark):
         pickle.dump(experiment_record, f)
 
 if __name__ == '__main__':
-    
+    env = gym.make(CONFIG['game']).unwrapped
     main()    
