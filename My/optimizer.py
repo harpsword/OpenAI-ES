@@ -13,7 +13,7 @@ class SGD(object):
             # print(params.data.size())
         
     def zero_grad(self):
-        for name, params in self.v.item():
+        for name, params in self.v.items():
             self.v[name] = torch.zeros_like(self.v[name], dtype=torch.float)
 
     def update_model_parameters(self, model, gradients):

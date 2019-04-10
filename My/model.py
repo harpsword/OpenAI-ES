@@ -11,7 +11,7 @@ trans=transforms.Compose(
 
     ])
 
-class TestNet(nn.Module):
+class Net(nn.Module):
     '''
     input: (N, C, H, W)
     output:(N)

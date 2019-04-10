@@ -41,8 +41,8 @@ class VirtualBatchNorm2D(nn.Module):
         new_coeff = 1. / (batch_size + 1)
         old_coeff = 1. - new_coeff
         output = self.bn(input)
-        new_mean = self.bn.running_mean.data()
-        new_var = self.bn.running_var.data()
+        new_mean = self.bn.running_mean
+        new_var = self.bn.running_var
         mean = new_coeff * new_mean + old_coeff * self.mean
         var = new_coeff * new_var + old_coeff * self.var
         return F.batch_norm(input, mean, var, self.weight, self.bias)

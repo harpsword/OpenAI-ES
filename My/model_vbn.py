@@ -33,27 +33,42 @@ class ESNet(nn.Module):
         self.vbn1 = VirtualBatchNorm2D(self.conv1_f)
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
         self.vbn3 = VirtualBatchNorm2D(self.conv3_f)
-        
-        self.used_bn1 = self.bn1
-        self.used_bn2 = self.bn2
-        self.used_bn3 = self.bn3
 
         self.fc1 = nn.Linear(600*20, 50)
         self.fc2 = nn.Linear(50, CONFIG['n_action'])
 
         self.set_parameter_no_grad()
         self._initialize_weights()
+        self.status = "bn"
 
-    def forward(self, x):
+    def forward_bn(self, x):
         x = trans(x).reshape(1, 3, 250, 160)
         # print(x.shape)
-        x = F.relu(self.used_bn1(F.max_pool2d(self.conv1(x), 2)))
+        x = F.relu(self.bn1(F.max_pool2d(self.conv1(x), 2)))
         # x = F.relu(F.max_pool2d(self.conv1(x), 2))
         # print(x.shape)
-        x = F.relu(self.used_bn2(F.max_pool2d(self.conv2(x), 2)))
+        x = F.relu(self.bn2(F.max_pool2d(self.conv2(x), 2)))
         # x = F.relu(F.max_pool2d(self.conv2(x), 2))
         # print(x.shape)
-        x = F.relu(self.used_bn3(F.max_pool2d(self.conv3(x), 2)))
+        x = F.relu(self.bn3(F.max_pool2d(self.conv3(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv3(x), 2))
+        # print(x.shape)
+        x = x.view(-1, 600*20)
+        x = F.relu(self.fc1(x))
+        # x = F.dropout(x, training=self.training)
+        x = self.fc2(x)
+        return F.softmax(x, dim=1)
+
+    def forward_vbn(self, x):
+        x = trans(x).reshape(1, 3, 250, 160)
+        # print(x.shape)
+        x = F.relu(self.vbn1(F.max_pool2d(self.conv1(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        # print(x.shape)
+        x = F.relu(self.vbn2(F.max_pool2d(self.conv2(x), 2)))
+        # x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        # print(x.shape)
+        x = F.relu(self.vbn3(F.max_pool2d(self.conv3(x), 2)))
         # x = F.relu(F.max_pool2d(self.conv3(x), 2))
         # print(x.shape)
         x = x.view(-1, 600*20)
@@ -66,10 +81,13 @@ class ESNet(nn.Module):
         self.vbn1.set_mean_var_from_bn(self.bn1)
         self.vbn2.set_mean_var_from_bn(self.bn2)
         self.vbn3.set_mean_var_from_bn(self.bn3)
-
-        self.used_bn1 = self.vbn1
-        self.used_bn2 = self.vbn2
-        self.used_bn3 = self.vbn3
+        self.status = 'vbn'
+    
+    def forward(self, x):
+        if self.status == 'bn':
+            return self.forward_bn(x)
+        elif self.status == 'vbn':
+            return self.forward_vbn(x)
 
     def _initialize_weights(self):
         for m in self.modules():
