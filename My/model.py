@@ -11,7 +11,7 @@ trans=transforms.Compose(
 
     ])
 
-class Net(nn.Module):
+class TestNet(nn.Module):
     '''
     input: (N, C, H, W)
     output:(N)
@@ -23,9 +23,9 @@ class Net(nn.Module):
         self.conv3 = nn.Conv2d(10, 20, kernel_size=3, padding=(0,1))
         # self.conv4 = nn.Conv2d(20, 40, kernel_size=3, padding=(0,1))
         # self.conv3_drop = nn.Dropout2d()
-        self.bn1 = nn.BatchNorm2d(6)
-        self.bn2 = nn.BatchNorm2d(10)
-        self.bn3 = nn.BatchNorm2d(20)
+        self.bn1 = nn.BatchNorm2d(6, affine=False)
+        self.bn2 = nn.BatchNorm2d(10, affine=False)
+        self.bn3 = nn.BatchNorm2d(20, affine=False)
         self.fc1 = nn.Linear(600*20, 50)
         self.fc2 = nn.Linear(50, CONFIG['n_action'])
 

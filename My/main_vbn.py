@@ -10,7 +10,7 @@ mp.set_sharing_strategy('file_system')
 
 from config import N_POPULATION, N_GENERATION, LR, SIGMA
 from config import CONFIG
-from model import build_model
+from model_vbn import build_model
 from train import train, get_reward
 from optimizer import SGD
 
@@ -21,7 +21,9 @@ from optimizer import SGD
 @click.option("--generation", default=N_GENERATION, help='the number of generation', type=int)
 @click.option("--lr", default=LR, help='learning rate')
 @click.option("--sigma", default=SIGMA, help='the SD of perturbed noise')
-def main(namemark, ncpu, batchsize, generation, lr, sigma):
+@click.option("--vbn_used",default=False, help='use virtual batch normalization', type=bool)
+@click.option("--vbn_test_g", default=10, help='the generation to estimation reference mean and var', type=int)
+def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn_used, vbn_test_g):
     env = gym.make(CONFIG['game']).unwrapped
     experiment_record = {}
     experiment_record['kid_rewards'] = []
@@ -41,9 +43,24 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma):
     util_ = np.maximum(0, np.log(base / 2 + 1) - np.log(rank))
     utility = util_ / util_.sum() - 1 / base
 
-    # training 
     optimizer = SGD(model.named_parameters(), lr)
     pool = mp.Pool(processes=ncpu)
+    # estimate mean and var
+    if vbn_used:
+        for g in range(vbn_test_g):
+            t0 = time.time()
+            model, kid_rewards = train(model, optimizer, utility, pool, sigma, env, int(batchsize/2), CONFIG)
+            print(
+                'Gen: ', g,
+                # '| Net_R: %.1f' % mar,
+                '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
+                '| Gen_T: %.2f' % (time.time() - t0),)
+        # reinit model and optimizer
+        optimizer.zero_grad()
+        model.switch_to_train()
+        model._initialize_weights()
+    
+    # training
     mar = None      # moving average reward
     for g in range(generation):
         t0 = time.time()

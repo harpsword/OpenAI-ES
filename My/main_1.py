@@ -1,3 +1,7 @@
+'''
+main_1.py
+每500代，最大步数+150
+'''
 
 import click
 import gym
@@ -73,8 +77,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma):
                 '| Gen_T: %.2f' % (time.time() - t0),)
         if mar >= CONFIG['eval_threshold']: break
         
-        # if (g-1)% 500 == 500 -1:
-        #     CONFIG['ep_max_step'] += 150
+        if (g-1)% 500 == 500 -1:
+            CONFIG['ep_max_step'] += 150
 
         if (g-1) % 1000 == 1000 -1:
             
