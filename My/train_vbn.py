@@ -2,9 +2,10 @@ import numpy as np
 import torch
 from util import sign
 from model_vbn import build_model
-
+import time
 
 def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
+    # start = time.time()
     if seed_and_id is not None:
         seed, k_id = seed_and_id
         np.random.seed(seed)
@@ -18,7 +19,6 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
                 for attr_value in name.split('.'):
                     tmp = getattr(tmp, attr_value)
                 noise = torch.tensor(np.random.normal(0,1,tmp.size()), dtype=torch.float)
-                
                 # print(torch.typename(noise))
                 # print(torch.typename(tmp))
                 tmp.add_(noise*sigma*sign(k_id))
@@ -26,6 +26,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
         model = base_model
     observation = env.reset()
     ep_r = 0.
+    # print('k_id mid:', k_id,time.time()-start)
     if ep_max_step is None:
         while True:
         # for step in range(ep_max_step):
@@ -47,6 +48,8 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
             ep_r += reward
             if done:
                 break
+    # print('k_id final:', k_id,time.time()-start)
+    # print('k_id step:', k_id,step)
     return ep_r
 
 def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
@@ -60,7 +63,9 @@ def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
                                           [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
     rewards = np.array([j.get() for j in jobs])
     
-    # rewards = [get_reward(model, env, CONFIG['ep_max_step'], None,)]
+    # rewards = [get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, [444, 0],)]
+
+    time.sleep(10)
     # print(rewards)
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 

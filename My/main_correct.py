@@ -10,8 +10,8 @@ mp.set_sharing_strategy('file_system')
 
 from config import N_POPULATION, N_GENERATION, LR, SIGMA
 from config import CONFIG
-from model import build_model
-from train_no_copy import train, get_reward
+from model_correct import build_model
+from train import train, get_reward
 from optimizer import SGD
 
 @click.command()

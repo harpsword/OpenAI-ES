@@ -14,6 +14,8 @@ from model_vbn import build_model
 from optimizer import SGD
 from train_vbn import train, get_reward
 
+torch.set_num_threads(1)
+
 @click.command()
 @click.argument("namemark")
 @click.option("--ncpu", default=mp.cpu_count()-1, help='The number of cores', type=int)
@@ -23,6 +25,7 @@ from train_vbn import train, get_reward
 @click.option("--sigma", default=SIGMA, help='the SD of perturbed noise')
 @click.option("--vbn/--no-vbn",default=False, help='use virtual batch normalization or not')
 @click.option("--vbn_test_g", default=10, help='the generation to estimation reference mean and var', type=int)
+# @click.option("--simple/--no-simple", default=True, help="use simple model or not")
 def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
     vbn = True
     env = gym.make(CONFIG['game']).unwrapped
