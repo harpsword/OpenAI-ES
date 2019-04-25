@@ -10,7 +10,7 @@ mp.set_sharing_strategy('file_system')
 
 from config import N_POPULATION, N_GENERATION, LR, SIGMA
 from config import CONFIG
-from model_vbn import build_model
+from modelf import build_model
 from optimizer import SGD
 from train_vbn import train, get_reward
 

@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 from util import sign
-from model_vbn import build_model
+from modelf import build_model
 import time
+from config import FRAME_SKIP
 
 def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
     # start = time.time()
@@ -24,20 +25,12 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
                 tmp.add_(noise*sigma*sign(k_id))
     else:
         model = base_model
+    env.frameskip = 1
     observation = env.reset()
     ep_r = 0.
     # print('k_id mid:', k_id,time.time()-start)
     if ep_max_step is None:
-        while True:
-        # for step in range(ep_max_step):
-            # print(trans(observation).size())
-            # print(type(observation))
-            action = model(observation)[0].argmax().item()
-            # print(action)
-            observation, reward , done, _ = env.step(action)
-            ep_r += reward
-            if done:
-                break
+        raise TypeError("test")
     else:
         for step in range(ep_max_step):
             # print(trans(observation).size())

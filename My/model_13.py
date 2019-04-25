@@ -1,5 +1,5 @@
 """
-model : Mnih et al., 2015, Human-level Control ... Nature
+model : Minh et al., 2013, Playing Atari with Deep Reinforcement Learning
 
 """
 import numpy as np
@@ -27,25 +27,20 @@ class ESNet(nn.Module):
     '''
     def __init__(self, CONFIG):
         super(ESNet, self).__init__()
-        self.conv1_f = 32
-        self.conv2_f = 64
-        self.conv3_f = 64
-        # output: 20x20x32
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=8, stride=4)
-        # output: 9x9x64
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        # output: 7x7x64
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.conv1_f = 16
+        self.conv2_f = 32
+        # output: 20x20x16
+        self.conv1 = nn.Conv2d(1, self.conv1_f, kernel_size=8, stride=4)
+        # output: 9x9x32
+        self.conv2 = nn.Conv2d(self.conv1_f, self.conv2_f, kernel_size=4, stride=2)
         self.bn1 = nn.BatchNorm2d(self.conv1_f, affine=False)
         self.bn2 = nn.BatchNorm2d(self.conv2_f, affine=False)
-        self.bn3 = nn.BatchNorm2d(self.conv3_f, affine=False)
 
         self.vbn1 = VirtualBatchNorm2D(self.conv1_f)
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
-        self.vbn3 = VirtualBatchNorm2D(self.conv3_f)
 
-        self.fc1 = nn.Linear(7*7*64, 512)
-        self.fc2 = nn.Linear(512, CONFIG['n_action'])
+        self.fc1 = nn.Linear(9*9*32, 512)
+        self.fc2 = nn.Linear(256, CONFIG['n_action'])
 
         self.set_parameter_no_grad()
         self._initialize_weights()
@@ -58,10 +53,8 @@ class ESNet(nn.Module):
         x = F.relu(x)
         x = self.bn2(self.conv2(x))
         x = F.relu(x)
-        x = self.bn3(self.conv3(x))
-        x = F.relu(x)
 
-        x = x.view(-1, 7*7*64)
+        x = x.view(-1, 9*9*32) 
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return F.softmax(x, dim=1)
@@ -71,9 +64,7 @@ class ESNet(nn.Module):
         x = F.relu(x)
         x = self.vbn2(self.conv2(x))
         x = F.relu(x)
-        x = self.vbn3(self.conv3(x))
-        x = F.relu(x)
-        x = x.view(-1, 7*7*64)
+        x = x.view(-1, 9*9*32)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return F.softmax(x, dim=1)
@@ -84,7 +75,6 @@ class ESNet(nn.Module):
     def switch_to_train(self):
         self.vbn1.set_mean_var_from_bn(self.bn1)
         self.vbn2.set_mean_var_from_bn(self.bn2)
-        self.vbn3.set_mean_var_from_bn(self.bn3)
         self.status = 'vbn'
     
     def forward(self, x):
