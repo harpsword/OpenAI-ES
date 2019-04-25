@@ -39,7 +39,7 @@ class ESNet(nn.Module):
         self.vbn1 = VirtualBatchNorm2D(self.conv1_f)
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
 
-        self.fc1 = nn.Linear(9*9*32, 512)
+        self.fc1 = nn.Linear(9*9*32, 256)
         self.fc2 = nn.Linear(256, CONFIG['n_action'])
 
         self.set_parameter_no_grad()
