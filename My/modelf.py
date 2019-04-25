@@ -1,3 +1,7 @@
+"""
+model : Mnih et al., 2015, Human-level Control ... Nature
+
+"""
 import math
 import torch
 import torch.nn as nn
@@ -42,9 +46,13 @@ class ESNet(nn.Module):
         self.set_parameter_no_grad()
         self._initialize_weights()
         self.status = "bn"
+        # self.before_frame should be PILImage
+        self.before_frame = None
 
     def forward_bn(self, x):
-        x = trans(x).reshape(1, 3, 250, 160)
+        print(type(x))
+        exit()
+        x = trans(x).reshape(1, 4, 84, 84)
 
         x = self.bn1(self.conv1(x))
         x = F.max_pool2d(F.relu(x), 2)
