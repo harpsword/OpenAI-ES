@@ -13,17 +13,21 @@ trans=transforms.Compose(
 
 class ESNet(nn.Module):
     '''
-    input: (N, C, H, W)
-    output:(N)
+    input: (N, 4, 84, 84)
+
+
     '''
     def __init__(self, CONFIG):
         super(ESNet, self).__init__()
-        self.conv1_f = 6
-        self.conv2_f = 10
-        self.conv3_f = 20
-        self.conv1 = nn.Conv2d(3, self.conv1_f, kernel_size=3, padding=(0,1))
-        self.conv2 = nn.Conv2d(self.conv1_f, self.conv2_f, kernel_size=3, padding=(1,1))
-        self.conv3 = nn.Conv2d(self.conv2_f, self.conv3_f, kernel_size=3, padding=(0,1))
+        self.conv1_f = 32
+        self.conv2_f = 64
+        self.conv3_f = 64
+        # output: 20x20x32
+        self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4)
+        # output: 9x9x64
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        # output: 7x7x64
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
         self.bn1 = nn.BatchNorm2d(self.conv1_f, affine=False)
         self.bn2 = nn.BatchNorm2d(self.conv2_f, affine=False)
         self.bn3 = nn.BatchNorm2d(self.conv3_f, affine=False)
@@ -32,8 +36,8 @@ class ESNet(nn.Module):
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
         self.vbn3 = VirtualBatchNorm2D(self.conv3_f)
 
-        self.fc1 = nn.Linear(600*20, 100)
-        self.fc2 = nn.Linear(100, CONFIG['n_action'])
+        self.fc1 = nn.Linear(7*7*64, 512)
+        self.fc2 = nn.Linear(512, CONFIG['n_action'])
 
         self.set_parameter_no_grad()
         self._initialize_weights()
