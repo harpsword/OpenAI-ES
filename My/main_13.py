@@ -66,16 +66,21 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
     
     # training
     from config import episodes_per_batch
+    batchsize = episodes_per_batch
     mar = None      # moving average reward
     for g in range(generation):
         t0 = time.time()
-        model, kid_rewards = train(model, optimizer, utility, pool, sigma, env, int(batchsize/2), CONFIG)
+        model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, utility, pool, sigma, env, int(batchsize/2), CONFIG)
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         # print(
         #         'Gen: ', g,
         #         # '| Net_R: %.1f' % mar,
         #         '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
         #         '| Gen_T: %.2f' % (time.time() - t0),)
+        print('Gen:', g,
+              'Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
+              'episodes number:', episodes_number,
+              'timestep number:', timestep_count)
 
         if g % 40 == 0:
         # if True:
