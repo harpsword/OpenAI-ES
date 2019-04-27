@@ -58,7 +58,6 @@ def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
     
     # rewards = [get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, [444, 0],)]
 
-    time.sleep(10)
     # print(rewards)
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
