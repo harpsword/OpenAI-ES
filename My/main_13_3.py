@@ -1,6 +1,6 @@
 '''
 Frame skip
-limitation of timestep
+no limitation of timestep
 '''
 import click
 import gym
@@ -15,7 +15,7 @@ from config import N_POPULATION, N_GENERATION, LR, SIGMA
 from config import CONFIG
 from model_13 import build_model
 from optimizer import SGD
-from train_13 import train, get_reward
+from train_13_3 import train, get_reward
 
 torch.set_num_threads(1)
 
@@ -69,12 +69,9 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
         model._initialize_weights()
     
     # training
-    from config import episodes_per_batch
-    batchsize = episodes_per_batch
     mar = None      # moving average reward
     for g in range(generation):
         t0 = time.time()
-        pool = mp.Pool(processes=ncpu)
         model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG)
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         # print(

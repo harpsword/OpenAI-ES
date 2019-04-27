@@ -1,4 +1,7 @@
 
+'''
+No Frame Skip
+'''
 import click
 import gym
 import torch

@@ -1,5 +1,6 @@
 '''
-No Frame Skip
+with frame skip
+but no limitation of timestep
 '''
 import numpy as np
 import torch
@@ -30,6 +31,8 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
         model = base_model
     env.frameskip = 1
     observation = env.reset()
+    obs_list = [observation] * FRAME_SKIP
+    break_is_true = False
     ep_r = 0.
     # print('k_id mid:', k_id,time.time()-start)
     if ep_max_step is None:
@@ -38,31 +41,45 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
         for step in range(ep_max_step):
             # print(trans(observation).size())
             # print(type(observation))
-            action = model(observation)[0].argmax().item()
-            # print(action)
-            observation, reward , done, _ = env.step(action)
-            ep_r += reward
-            if done:
+            if len(obs_list) != FRAME_SKIP:
+                print("Error", len(obs_list), "step:",step)
+            action = model(obs_list)[0].argmax().item()
+            obs_list = []
+            for i in range(FRAME_SKIP):
+                observation, reward , done, _ = env.step(action)
+                obs_list.append(observation)
+                ep_r += reward
+                if done:
+                    break_is_true = True
+            if break_is_true:
                 break
     # print('k_id final:', k_id,time.time()-start)
     # print('k_id step:', k_id,step)
     return ep_r, step
 
-def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
+def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
     # pass seed instead whole noise matrix to parallel will save your time
     # mirrored sampling
-    # print(type(N_KID))
     noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)   
 
     # distribute training in parallel
     jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],sigma,CONFIG,
                                           [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
-        
-    rewards = np.array([j.get()[0] for j in jobs])
+    from config import timesteps_per_batch
+    # N_KID means episodes_per_batch
+    rewards = []
+    timesteps = []
+    timesteps_count = 0
+    for idx, j in enumerate(jobs):
+        rewards.append(j.get()[0])
+        timesteps.append(j.get()[1])
+        timesteps_count += j.get()[1]
     
-    # rewards = [get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, [444, 0],)]
+    base = len(rewards)
+    rank = np.arange(1, base + 1)
+    util_ = np.maximum(0, np.log(base / 2 + 1) - np.log(rank))
+    utility = util_ / util_.sum() - 1 / base
 
-    # print(rewards)
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = {}       # initialize update values
@@ -79,4 +96,4 @@ def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
     for name, params in cumulative_update.items():
         cumulative_update[name].mul_(1/(2*N_KID*sigma))
     optimizer.update_model_parameters(model, cumulative_update)
-    return model, rewards
+    return model, rewards, timesteps_count, len(rewards)
