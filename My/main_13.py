@@ -49,11 +49,12 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
 
     optimizer = SGD(model.named_parameters(), lr)
     pool = mp.Pool(processes=ncpu)
+    test_episodes = 15
     # estimate mean and var
     if vbn:
         for g in range(vbn_test_g):
             t0 = time.time()
-            model, kid_rewards, _, _ = train(model, optimizer, utility, pool, sigma, env,20, CONFIG)
+            model, kid_rewards, _, _ = train(model, optimizer, pool, sigma, env, test_episodes, CONFIG)
             print(
                 'Gen: ', g,
                 # '| Net_R: %.1f' % mar,
@@ -70,7 +71,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
     mar = None      # moving average reward
     for g in range(generation):
         t0 = time.time()
-        model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, utility, pool, sigma, env, int(batchsize/2), CONFIG)
+        model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG)
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         # print(
         #         'Gen: ', g,
@@ -88,7 +89,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
             mar = 0
             for j in range(test_times):
                 # test trained net without noises
-                net_r = get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, None,)
+                net_r, _ = get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, None,)
                 # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
                 mar += net_r
             mar = mar / test_times

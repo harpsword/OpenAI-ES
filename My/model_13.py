@@ -7,7 +7,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from config import SIMPLE_GAME, GRAPH_GAME
+from config import SIMPLE_GAME, GRAPH_GAME, FRAME_SKIP
 from torchvision import transforms
 from vbn import VirtualBatchNorm2D
 
@@ -30,7 +30,7 @@ class ESNet(nn.Module):
         self.conv1_f = 16
         self.conv2_f = 32
         # output: 20x20x16
-        self.conv1 = nn.Conv2d(1, self.conv1_f, kernel_size=8, stride=4)
+        self.conv1 = nn.Conv2d(FRAME_SKIP, self.conv1_f, kernel_size=8, stride=4)
         # output: 9x9x32
         self.conv2 = nn.Conv2d(self.conv1_f, self.conv2_f, kernel_size=4, stride=2)
         self.bn1 = nn.BatchNorm2d(self.conv1_f, affine=False)
@@ -77,7 +77,36 @@ class ESNet(nn.Module):
         self.vbn2.set_mean_var_from_bn(self.bn2)
         self.status = 'vbn'
     
-    def forward(self, x):
+    def forward(self, x_list):
+        assert len(x_list) == FRAME_SKIP
+        # 倒序
+        if self.previous_frame is None:
+            for idx in range(FRAME_SKIP):
+                # idx 0, id_t, len-1
+                id_t = FRAME_SKIP - 1 - idx
+                for j in range(id_t):
+                    x_list[id_t] = np.maximum(x_list[idx], x_list[j])
+        else:
+            all_list = self.previous_frame + x_list
+            for i in range(FRAME_SKIP):
+                # 倒叙
+                id_i =  FRAME_SKIP - 1 - i
+                for j in range(FRAME_SKIP):
+                    id_j = FRAME_SKIP - 1 + j - i
+                    x_list[id_i] = np.maximum(x_list[id_i], all_list[id_j])
+
+        self.previous_frame = [x.copy() for x in x_list]
+        new_xlist = []
+        for x in x_list:
+            x = transforms.ToPILImage()(x).convert('RGB')
+            # output of trans: (1, 84, 84)
+            x = trans(x)
+            x = x.reshape(1, 1, 84, 84)
+            new_xlist.append(x)
+
+        x = torch.cat(new_xlist, 1)
+
+        '''
         # preprocess input data
         x_copy = x.copy()
         if self.previous_frame is not None:
@@ -87,6 +116,7 @@ class ESNet(nn.Module):
         # output of trans : (1, 84, 84)
         x = trans(x)
         x = x.reshape(1, 1, 84, 84)
+        '''
 
         if self.status == 'bn':
             return self.forward_bn(x)
