@@ -59,7 +59,7 @@ def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
     timesteps = []
     timesteps_count = 0
     for j in jobs:
-        reward.append(j.get()[0])
+        rewards.append(j.get()[0])
         timesteps.append(j.get()[1])
         timesteps_count += j.get()[1]
         if timesteps_count > timesteps_per_batch:
