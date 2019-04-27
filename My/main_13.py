@@ -53,7 +53,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
     if vbn:
         for g in range(vbn_test_g):
             t0 = time.time()
-            model, kid_rewards = train(model, optimizer, utility, pool, sigma, env, 20, CONFIG)
+            model, kid_rewards, _, _ = train(model, optimizer, utility, pool, sigma, env,20, CONFIG)
             print(
                 'Gen: ', g,
                 # '| Net_R: %.1f' % mar,
