@@ -12,7 +12,7 @@ from config import N_POPULATION, N_GENERATION, LR, SIGMA
 from config import CONFIG
 from model_13 import build_model
 from optimizer import SGD
-from train_13 import train, get_reward
+from train_13_2 import train, get_reward
 
 torch.set_num_threads(1)
 

@@ -48,24 +48,18 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
 def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
     # pass seed instead whole noise matrix to parallel will save your time
     # mirrored sampling
+    # print(type(N_KID))
     noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)   
 
     # distribute training in parallel
     jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],sigma,CONFIG,
                                           [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
-    from config import timesteps_per_batch
-    # N_KID means episodes_per_batch
-    rewards = []
-    timesteps = []
-    timesteps_count = 0
-    for j in jobs:
-        reward.append(j.get()[0])
-        timesteps.append(j.get()[1])
-        timesteps_count += j.get()[1]
-        if timesteps_count > timesteps_per_batch:
-            pool.terminate()
-            break
+        
+    rewards = np.array([j.get()[0] for j in jobs])
     
+    # rewards = [get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, [444, 0],)]
+
+    # print(rewards)
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = {}       # initialize update values

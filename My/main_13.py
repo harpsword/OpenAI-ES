@@ -53,7 +53,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
     if vbn:
         for g in range(vbn_test_g):
             t0 = time.time()
-            model, kid_rewards = train(model, optimizer, utility, pool, sigma, env, int(batchsize/2), CONFIG)
+            model, kid_rewards = train(model, optimizer, utility, pool, sigma, env, 20, CONFIG)
             print(
                 'Gen: ', g,
                 # '| Net_R: %.1f' % mar,
@@ -65,6 +65,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
         model._initialize_weights()
     
     # training
+    from config import episodes_per_batch
     mar = None      # moving average reward
     for g in range(generation):
         t0 = time.time()

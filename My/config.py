@@ -20,3 +20,6 @@ CONFIG = [
 
 SIMPLE_GAME = ['CartPole-v0', 'MountainCar-v0', 'Pendulum-v0']
 GRAPH_GAME = ['Assault-v0']
+
+timesteps_per_batch = 100000
+episodes_per_batch = 10000
