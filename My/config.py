@@ -3,8 +3,10 @@
 N_KID = 18         # half of the training population
 N_POPULATION = 2*N_KID
 N_GENERATION = 10000         # training step
-LR = 0.05
-SIGMA = 0.05
+LR = 0.02
+SIGMA = 0.02
+#LR = 0.05
+#SIGMA = 0.05
 
 FRAME_SKIP = 4
 

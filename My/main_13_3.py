@@ -30,6 +30,8 @@ torch.set_num_threads(1)
 @click.option("--vbn_test_g", default=10, help='the generation to estimation reference mean and var', type=int)
 # @click.option("--simple/--no-simple", default=True, help="use simple model or not")
 def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
+    print(lr)
+    print(sigma)
     vbn = True
     env = gym.make(CONFIG['game']).unwrapped
     experiment_record = {}
@@ -79,10 +81,11 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
         #         # '| Net_R: %.1f' % mar,
         #         '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
         #         '| Gen_T: %.2f' % (time.time() - t0),)
-        print('Gen:', g,
+        if g % 5 == 0:
+            print('Gen:', g,
               'Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
               'episodes number:', episodes_number,
-              'timestep number:', timestep_count)
+             	'timestep number:', timestep_count)
 
         if g % 40 == 0:
         # if True:
