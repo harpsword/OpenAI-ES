@@ -1,0 +1,17 @@
+
+{
+    "Assualt-v0":{
+        "game":"Assualt-v0",
+        "ep_max_step":1000,
+        "eval_threshold":1400
+    },
+    "Amidar-v0":{
+        "game":"Amidar-v0",
+        "ep_max_step":1000,
+        "eval_threshold":110
+    },
+    "BeamRider-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":700
+    }
+}

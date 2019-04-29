@@ -170,8 +170,5 @@ def build_model(CONFIG):
     if gamename in SIMPLE_GAME:
         print("model type")
         return SimpleNet(CONFIG)
-    elif gamename in GRAPH_GAME:
-        return ESNet(CONFIG)
     else:
-        print("please select a correct game!")
-        exit()
+        return ESNet(CONFIG)

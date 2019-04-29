@@ -17,11 +17,12 @@ CONFIG = [
     dict(game="MountainCar-v0",
          n_feature=2, n_action=3, continuous_a=[False], ep_max_step=200, eval_threshold=-120),
     dict(game="Pendulum-v0",
-         n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180)
-][0]    # choose your game
+         n_feature=3, n_action=1, continuous_a=[True, 2.], ep_max_step=200, eval_threshold=-180),
+    dict(game="Amidar-v0", n_feature=None, observation=(250, 160), n_action=10, ep_max_step=1000, eval_threshold=100)
+][4]    # choose your game
 
 SIMPLE_GAME = ['CartPole-v0', 'MountainCar-v0', 'Pendulum-v0']
-GRAPH_GAME = ['Assault-v0']
+GRAPH_GAME = ['Assault-v0', 'Amidar-v0']
 
 timesteps_per_batch = 100000
 episodes_per_batch = 10000

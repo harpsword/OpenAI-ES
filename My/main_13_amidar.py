@@ -1,6 +1,6 @@
 '''
-Frame skip = 4
-no limitation of timestep one batch
+Frame skip
+no limitation of timestep
 '''
 import click
 import gym
@@ -12,9 +12,10 @@ import torch.multiprocessing as mp
 mp.set_sharing_strategy('file_system')
 
 from config import N_POPULATION, N_GENERATION, LR, SIGMA
+from config import CONFIG
 from model_13 import build_model
 from optimizer import SGD
-from train_13_3 import train, get_reward, test
+from train_13_3 import train, get_reward
 
 torch.set_num_threads(1)
 
@@ -25,21 +26,14 @@ torch.set_num_threads(1)
 @click.option("--generation", default=N_GENERATION, help='the number of generation', type=int)
 @click.option("--lr", default=LR, help='learning rate')
 @click.option("--sigma", default=SIGMA, help='the SD of perturbed noise')
-@click.option("--vbn/--no-vbn",default=True, help='use virtual batch normalization or not')
+@click.option("--vbn/--no-vbn",default=False, help='use virtual batch normalization or not')
 @click.option("--vbn_test_g", default=10, help='the generation to estimation reference mean and var', type=int)
-@click.option("--gamename", default="Assualt-v0", help="the name of tested game")
 # @click.option("--simple/--no-simple", default=True, help="use simple model or not")
-def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, gamename):
+def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g):
     print(lr)
     print(sigma)
-    import json
-    configfile = "config.json"
-    with open(configfile, "r") as f:
-        CONFIG = json.loads(f.read())
-    CONFIG = CONFIG[gamename]
-    env = gym.make(gamename)
-    CONFIG['n_action'] = env.action_space.n
-    CONFIG['game'] = gamename
+    vbn = True
+    env = gym.make(CONFIG['game']).unwrapped
     experiment_record = {}
     experiment_record['kid_rewards'] = []
     experiment_record['test_rewards'] = []
@@ -95,16 +89,21 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
 
         if g % 40 == 0:
         # if True:
-            test_times = 100
-            test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
-            test_rewards_mean = np.mean(np.array(test_rewards))
-            experiment_record['test_rewards'].append([g, test_rewards])
+            test_times = 5
+            mar = 0
+            for j in range(test_times):
+                # test trained net without noises
+                net_r, _ = get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, None,)
+                # mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r       # moving average reward
+                mar += net_r
+            mar = mar / test_times
+            experiment_record['test_rewards'].append([g, mar])
             print(
                 'Gen: ', g,
-                '| Net_R: %.1f' % test_rewards_mean, 
+                '| Net_R: %.1f' % mar,
                 '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
                 '| Gen_T: %.2f' % (time.time() - t0),)
-        if test_rewards_mean >= CONFIG['eval_threshold']: break
+        if mar >= CONFIG['eval_threshold']: break
         
         if (g-1)% 500 == 500 -1:
             CONFIG['ep_max_step'] += 150

@@ -97,3 +97,19 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
         cumulative_update[name].mul_(1/(2*N_KID*sigma))
     optimizer.update_model_parameters(model, cumulative_update)
     return model, rewards, timesteps_count, len(rewards)
+
+
+def test(model, pool, env, test_times, CONFIG):
+    # distribute training in parallel
+    jobs = [pool.apply_async(get_reward, (model, env, CONFIG['ep_max_step'], sigma, CONFIG, None)) for i in range(test_times)]
+    from config import timesteps_per_batch
+    # N_KID means episodes_per_batch
+    rewards = []
+    timesteps = []
+    timesteps_count = 0
+    for idx, j in enumerate(jobs):
+        rewards.append(j.get()[0])
+        timesteps.append(j.get()[1])
+        timesteps_count += j.get()[1]
+    
+    return rewards, timesteps_count, len(rewards)
