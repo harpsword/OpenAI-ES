@@ -30,12 +30,13 @@ torch.set_num_threads(1)
 @click.option("--gamename", default="Assualt-v0", help="the name of tested game")
 # @click.option("--simple/--no-simple", default=True, help="use simple model or not")
 def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, gamename):
-    print(lr)
-    print(sigma)
+    print("learning rate:",lr)
+    print("sigma:", sigma)
     import json
     configfile = "config.json"
     with open(configfile, "r") as f:
         CONFIG = json.loads(f.read())
+    print("gamename:", gamename)
     CONFIG = CONFIG[gamename]
     env = gym.make(gamename)
     CONFIG['n_action'] = env.action_space.n
@@ -46,8 +47,6 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
 
     device = torch.device("cpu")
     model = build_model(CONFIG).to(device)
-    # print(type(model))
-    # model.share_memory()
 
     # utility instead reward for update parameters (rank transformation)
     base = batchsize   # *2 for mirrored sampling
@@ -82,16 +81,12 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         t0 = time.time()
         model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG)
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
-        # print(
-        #         'Gen: ', g,
-        #         # '| Net_R: %.1f' % mar,
-        #         '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
-        #         '| Gen_T: %.2f' % (time.time() - t0),)
         if g % 5 == 0:
             print('Gen:', g,
-              'Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
-              'episodes number:', episodes_number,
-             	'timestep number:', timestep_count)
+              '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
+              '| episodes number:', episodes_number,
+             	  '| timestep number:', timestep_count,
+                  '| Gen_T: %.2f' %(time.time() - t0))
 
         if g % 40 == 0:
         # if True:

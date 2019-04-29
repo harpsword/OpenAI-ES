@@ -101,7 +101,7 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
 
 def test(model, pool, env, test_times, CONFIG):
     # distribute training in parallel
-    jobs = [pool.apply_async(get_reward, (model, env, CONFIG['ep_max_step'], sigma, CONFIG, None)) for i in range(test_times)]
+    jobs = [pool.apply_async(get_reward, (model, env, CONFIG['ep_max_step'], None, CONFIG, None)) for i in range(test_times)]
     from config import timesteps_per_batch
     # N_KID means episodes_per_batch
     rewards = []

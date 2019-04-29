@@ -12,6 +12,14 @@
     },
     "BeamRider-v0":{
         "ep_max_step":1000,
-        "eval_threshold":800
+        "eval_threshold": 750
+    },
+    "Asteroids-v0":{
+        "ep_max_step":1000,
+        "eval_threshold": 1550
+    },
+    "Boxing-v0":{
+        "ep_max_step": 1000,
+        "eval_threshold": 50
     }
 }
