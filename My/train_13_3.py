@@ -1,6 +1,6 @@
 '''
 with frame skip
-but no limitation of timestep
+but no limitation of timestep one batch
 '''
 import numpy as np
 import torch
