@@ -13,7 +13,7 @@ import numpy as np
 import torch.multiprocessing as mp
 mp.set_sharing_strategy('file_system')
 
-from config import N_POPULATION, N_GENERATION, LR, SIGMA
+from config import N_POPULATION, N_GENERATION, LR, SIGMA, TIMESTEP_LIMIT
 from model_13 import build_model
 from optimizer import SGD
 from train_13_3 import train, get_reward, test
@@ -112,6 +112,11 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     for g in range(generation):
         t0 = time.time()
         model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG)
+        training_timestep_count += timestep_count
+        if training_timestep_count > TIMESTEP_LIMIT:
+            logging.info("satisfied timestep limit")
+            logging.info("Now timestep %s" % training_timestep_count)
+            break
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         if g % 5 == 0:
             logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), episodes_number, timestep_count, time.time()-t0))
