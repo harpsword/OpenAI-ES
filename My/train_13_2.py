@@ -1,5 +1,6 @@
 '''
 No Frame Skip
+
 '''
 import numpy as np
 import torch
@@ -80,3 +81,4 @@ def train(model, optimizer, utility, pool, sigma, env, N_KID, CONFIG):
         cumulative_update[name].mul_(1/(2*N_KID*sigma))
     optimizer.update_model_parameters(model, cumulative_update)
     return model, rewards
+xianzhi

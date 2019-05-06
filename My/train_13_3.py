@@ -1,6 +1,7 @@
 '''
 with frame skip
 but no limitation of timestep one batch
+weight decay
 '''
 import numpy as np
 import torch
@@ -95,6 +96,12 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
             cumulative_update[name].add_(utility[ui]*sign(k_id)*noise)
     for name, params in cumulative_update.items():
         cumulative_update[name].mul_(1/(2*N_KID*sigma))
+    # weight decay
+    for name, params in model.named_parameters():
+        tmp = model
+        for attr_value in name.split('.'):
+            tmp = getattr(tmp, attr_value)
+        cumulative_update[name].add_(-CONFIG['l2coeff']*tmp)
     optimizer.update_model_parameters(model, cumulative_update)
     return model, rewards, timesteps_count, len(rewards)
 
