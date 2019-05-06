@@ -1,6 +1,6 @@
 
 {
-    "Assualt-v0":{
+    "Assault-v0":{
         "game":"Assualt-v0",
         "ep_max_step":1000,
         "eval_threshold":1800,

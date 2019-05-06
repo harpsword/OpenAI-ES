@@ -60,6 +60,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     print("sigma:", sigma)
     print("gamename:", gamename)
 
+    checkpoint_name = gamename + namemark + "-sigma" + str(sigma) +'-lr' + str(lr)
+
     import json
     configfile = "config.json"
     with open(configfile, "r") as f:
@@ -144,8 +146,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
 
         if (g-1) % 1000 == 1000 -1:
             logging.info("Gen %s | storing model" % g)
-            torch.save(model.state_dict(), CONFIG['game']+str(namemark)+"genetation"+str(g)+".pt")
-            with open("experiment_record"+str(namemark)+"genetation"+str(g)+".pickle", "wb") as f:
+            torch.save(model.state_dict(), checkpoint_name + 'generation'+str(g)+'.pt')
+            with open("experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
     run_times =20
@@ -164,7 +166,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         '| Gen_T: %.2f' % (time.time() - t0),)
 
     # ---------------SAVE---------
-    torch.save(model.state_dict(), CONFIG['game']+str(namemark)+".pt")
+    torch.save(model.state_dict(), checkpoint_name + '.pt')
     with open("experiment_record"+str(namemark)+".pickle", "wb") as f:
         pickle.dump(experiment_record, f)
 

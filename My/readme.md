@@ -4,7 +4,7 @@
 
 selected game:
 
-1. Assualt-v0, 1673.9
+1. Assault-v0, 1673.9
 2. Amidar-v0, 112
 3. BeamRider-v0, 744
 4. Asteroids-v0, 1562.0
@@ -21,7 +21,7 @@ This item is - coeff * theta.
 
 | Game Name    | objective performance | performance of mine | timestep one batch | lr   | sigma | batch size | Comment         |
 | ------------ | --------------------- | ------------------- | ------------------ | ---- | ----- | ---------- | --------------- |
-| Assualt-v0   | 1673.9                |                     |                    |      |       |            |                 |
+| Assault-v0 | 1673.9                |                     |                    |      |       |            |                 |
 | Amidar-v0    | 112.0                 | 110.8               | 10w                | 0.01 |       |            |                 |
 | BeamRider-v0 |  744                  |                     |                    |      |       |            |                 |
 | Asteroids-v0 |    1562.0             |                     |                    |      |       |            |                 |
