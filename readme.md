@@ -15,3 +15,9 @@
 4. torch(1.0)
 5. torchvision
 
+
+### selected Game
+
+| Game Name | objective performance | performance of mine | timestep one batch | lr | sigma | batchsize | Comment |
+| Amidar-v0 |  112.0                |       110.8         |    10w             |  0.01 | 0.02  |  400      | No weight decay |
+  

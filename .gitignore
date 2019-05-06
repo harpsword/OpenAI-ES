@@ -2,3 +2,4 @@
 *.pt
 *.pickle
 *.pyc
+*/log/*
