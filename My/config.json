@@ -3,13 +3,13 @@
     "Assualt-v0":{
         "game":"Assualt-v0",
         "ep_max_step":1000,
-        "eval_threshold":1650,
+        "eval_threshold":1800,
         "l2coeff":0.005
     },
     "Amidar-v0":{
         "game":"Amidar-v0",
         "ep_max_step":1000,
-        "eval_threshold":110,
+        "eval_threshold":130,
         "l2coeff":0.005
     },
     "BeamRider-v0":{
@@ -19,7 +19,7 @@
     },
     "Asteroids-v0":{
         "ep_max_step":1000,
-        "eval_threshold": 1550,
+        "eval_threshold": 1570,
         "l2coeff":0.005
     },
     "Boxing-v0":{
