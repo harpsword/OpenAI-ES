@@ -150,21 +150,13 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             with open("experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
-    run_times =20
-    mar = 0
-    for j in range(run_times):
-        # test trained net without noise
-        net_r = get_reward(model, env, CONFIG['ep_max_step'], sigma, CONFIG, None,)
-        mar += net_r
-    mar = mar / run_times
-    logging.info("test the final model")
-    print("runing 100 times")
-    print(
-        'Gen: ', g,
-        '| Net_R: %.1f' % mar,
-        '| Kid_avg_R: %.1f' % kid_rewards.mean(),
-        '| Gen_T: %.2f' % (time.time() - t0),)
+    test_times = 100
+    test_rewards, _, _ = test(model, pool, env, test_times, CONFIG)
+    test_rewards_mean = np.mean(np.array(test_rewards))
+    logging.info("test final model, Mean Reward of 100 times: %.1f" % test_rewards_mean)
 
+    print("runing 100 times")
+    print("testing results :", test_rewards_mean)
     # ---------------SAVE---------
     torch.save(model.state_dict(), checkpoint_name + '.pt')
     with open("experiment_record"+str(namemark)+".pickle", "wb") as f:

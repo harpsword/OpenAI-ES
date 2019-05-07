@@ -14,7 +14,7 @@
     },
     "BeamRider-v0":{
         "ep_max_step":1000,
-        "eval_threshold": 750,
+        "eval_threshold": 10000,
         "l2coeff":0.005
     },
     "Asteroids-v0":{
