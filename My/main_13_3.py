@@ -135,6 +135,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
             logging.info("test model, Reward: %.1f" % test_rewards_mean)
+            logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
             print(
                 'Gen: ', g,
                 '| Net_R: %.1f' % test_rewards_mean) 
