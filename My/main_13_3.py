@@ -20,6 +20,7 @@ from train_13_3 import train, get_reward, test
 
 torch.set_num_threads(1)
 LogFolder = os.path.join(os.getcwd(), 'log')
+model_storage_path = '/home/yyl/model/es-rl/'
 
 
 def setup_logging(logfile):
@@ -147,8 +148,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
 
         if (g-1) % 1000 == 1000 -1:
             logging.info("Gen %s | storing model" % g)
-            torch.save(model.state_dict(), checkpoint_name + 'generation'+str(g)+'.pt')
-            with open("experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
+            torch.save(model.state_dict(), model_storage_path+checkpoint_name + 'generation'+str(g)+'.pt')
+            with open(model_storage_path+"experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
     test_times = 100
@@ -159,8 +160,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     print("runing 100 times")
     print("testing results :", test_rewards_mean)
     # ---------------SAVE---------
-    torch.save(model.state_dict(), checkpoint_name + '.pt')
-    with open("experiment_record"+str(namemark)+".pickle", "wb") as f:
+    torch.save(model.state_dict(), model_storage_path+checkpoint_name + '.pt')
+    with open(model_storage_path+"experiment_record"+str(namemark)+".pickle", "wb") as f:
         pickle.dump(experiment_record, f)
 
 

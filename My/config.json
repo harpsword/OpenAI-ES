@@ -57,7 +57,7 @@
         "eval_threshold":1267410,
         "l2coeff":0.005
     },
-    "BankHeis-v0":{
+    "BankHeist-v0":{
         "ep_max_step":1000,
         "eval_threshold":225,
         "l2coeff":0.005
