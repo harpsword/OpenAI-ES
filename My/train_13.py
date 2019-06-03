@@ -47,6 +47,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
             # but have not found any article about the meaning of every actions
             observation, reward, done, _ = env.step(0)
             ProcessU.step(observation)
+            ep_r += reward
 
         for step in range(ep_max_step):
             action = model(ProcessU.to_torch_tensor())[0].argmax().item()
