@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from config import SIMPLE_GAME, GRAPH_GAME, FRAME_SKIP
 from torchvision import transforms
 from vbn import VirtualBatchNorm2D
+from collections import deque
 
 
 trans=transforms.Compose(
@@ -77,47 +78,7 @@ class ESNet(nn.Module):
         self.vbn2.set_mean_var_from_bn(self.bn2)
         self.status = 'vbn'
     
-    def forward(self, x_list):
-        assert len(x_list) == FRAME_SKIP
-        # 倒序
-        if self.previous_frame is None:
-            for idx in range(FRAME_SKIP):
-                # idx 0, id_t, len-1
-                id_t = FRAME_SKIP - 1 - idx
-                for j in range(id_t):
-                    x_list[id_t] = np.maximum(x_list[idx], x_list[j])
-        else:
-            all_list = self.previous_frame + x_list
-            for i in range(FRAME_SKIP):
-                # 倒叙
-                id_i =  FRAME_SKIP - 1 - i
-                for j in range(FRAME_SKIP):
-                    id_j = FRAME_SKIP - 1 + j - i
-                    x_list[id_i] = np.maximum(x_list[id_i], all_list[id_j])
-
-        self.previous_frame = [x.copy() for x in x_list]
-        new_xlist = []
-        for x in x_list:
-            x = transforms.ToPILImage()(x).convert('RGB')
-            # output of trans: (1, 84, 84)
-            x = trans(x)
-            x = x.reshape(1, 1, 84, 84)
-            new_xlist.append(x)
-
-        x = torch.cat(new_xlist, 1)
-
-        '''
-        # preprocess input data
-        x_copy = x.copy()
-        if self.previous_frame is not None:
-            x = np.maximum(x, self.previous_frame)
-        self.previous_frame = x_copy
-        x = transforms.ToPILImage()(x).convert('RGB') 
-        # output of trans : (1, 84, 84)
-        x = trans(x)
-        x = x.reshape(1, 1, 84, 84)
-        '''
-
+    def forward(self, x):
         if self.status == 'bn':
             return self.forward_bn(x)
         elif self.status == 'vbn':
@@ -163,6 +124,37 @@ class SimpleNet(nn.Module):
         input = self.fc3(input)
         # input = input[0]
         return F.softmax(input, dim=1)
+
+class ProcessUnit(object):
+
+    def __init__(self, length):
+        self.length = length
+        self.frame_list = deque(maxlen=length)
+        self.previous_frame = None
+
+    def step(self, x):
+        if len(self.frame_list) == self.length:
+            self.previous_frame = self.frame_list[0]
+            self.frame_list.append(x)
+        else:
+            self.frame_list.append(x)
+
+    def to_torch_tensor(self):
+        assert len(self.frame_list) == self.length
+        x_list = self.frame_list
+        frame_skip = self.length
+        new_xlist = [np.maximum(self.previous_frame, x_list[0])]
+        for i in range(frame_skip-1):
+            new_xlist.append(np.maximum(x_list[i],x_list[i+1]))
+        for idx, x in enumerate(new_xlist):
+            new_xlist[idx] = self.transform(new_xlist[idx])
+        return torch.cat(new_xlist, 1)
+
+    def transform(self, x):
+        x = transforms.ToPILImage()(x).convert('RGB')
+        x = trans(x)
+        x = x.reshape(1, 1, 84, 84)
+        return x
 
 
 def build_model(CONFIG):

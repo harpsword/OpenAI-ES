@@ -6,11 +6,11 @@ weight decay
 import numpy as np
 import torch
 from util import sign
-from model_13 import build_model
+from model_13 import build_model, ProcessUnit
 import time
 from config import FRAME_SKIP
 
-def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
+def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, test=False):
     # start = time.time()
     if seed_and_id is not None:
         seed, k_id = seed_and_id
@@ -25,8 +25,6 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
                 for attr_value in name.split('.'):
                     tmp = getattr(tmp, attr_value)
                 noise = torch.tensor(np.random.normal(0,1,tmp.size()), dtype=torch.float)
-                # print(torch.typename(noise))
-                # print(torch.typename(tmp))
                 tmp.add_(noise*sigma*sign(k_id))
     else:
         model = base_model
@@ -39,23 +37,29 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None):
     if ep_max_step is None:
         raise TypeError("test")
     else:
+        ProcessU = ProcessUnit(FRAME_SKIP)
+        ProcessU.step(observation)
+        
+        if test == True:
+            ep_max_step = 18000
+        no_op_frames = np.random.randint(FRAME_SKIP, 30)
+        for i in range(no_op_frames):
+            # TODO: I think 0 is Null Action
+            # but have not found any article about the meaning of every actions
+            observation, reward, done, _ = env.step(0)
+            ProcessU.step(observation)
+
         for step in range(ep_max_step):
-            # print(trans(observation).size())
-            # print(type(observation))
-            if len(obs_list) != FRAME_SKIP:
-                print("Error", len(obs_list), "step:",step)
-            action = model(obs_list)[0].argmax().item()
+            action = model(ProcessU.to_torch_tensor())[0].argmax().item()
             obs_list = []
             for i in range(FRAME_SKIP):
                 observation, reward , done, _ = env.step(action)
-                obs_list.append(observation)
+                ProcessU.step(observation)
                 ep_r += reward
                 if done:
                     break_is_true = True
             if break_is_true:
                 break
-    # print('k_id final:', k_id,time.time()-start)
-    # print('k_id step:', k_id,step)
     return ep_r, step
 
 def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
@@ -108,7 +112,7 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
 
 def test(model, pool, env, test_times, CONFIG):
     # distribute training in parallel
-    jobs = [pool.apply_async(get_reward, (model, env, CONFIG['ep_max_step'], None, CONFIG, None)) for i in range(test_times)]
+    jobs = [pool.apply_async(get_reward, (model, env, CONFIG['ep_max_step'], None, CONFIG, None, True)) for i in range(test_times)]
     from config import timesteps_per_batch
     # N_KID means episodes_per_batch
     rewards = []

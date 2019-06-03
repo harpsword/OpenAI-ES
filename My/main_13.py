@@ -16,7 +16,7 @@ mp.set_sharing_strategy('file_system')
 from config import N_POPULATION, N_GENERATION, LR, SIGMA, TIMESTEP_LIMIT
 from model_13 import build_model
 from optimizer import SGD
-from train_13_3 import train, get_reward, test
+from train_13 import train, get_reward, test
 
 torch.set_num_threads(1)
 LogFolder = os.path.join(os.getcwd(), 'log')
@@ -63,22 +63,26 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
 
     checkpoint_name = gamename + namemark + "-sigma" + str(sigma) +'-lr' + str(lr)
 
-    import json
-    configfile = "config.json"
-    with open(configfile, "r") as f:
-        CONFIG = json.loads(f.read())
-    CONFIG = CONFIG[gamename]
+    import pandas as pd
+    config = pd.read_csv('config.csv')
+    CONFIG = dict()
+    CONFIG['game'] = gamename + '-v0'
+    CONFIG['ep_max_step'] = 1000
+    CONFIG['eval_threshold'] = config[config['gamename']==gamename].iloc[0,1]
+    CONFIG['l2coeff'] = 0.005
+
     logging.info("Settings: %s", str(CONFIG))
 
-    env = gym.make(gamename)
+    env = gym.make(gamename+'-v0')
     CONFIG['n_action'] = env.action_space.n
-    CONFIG['game'] = gamename
     experiment_record = {}
     experiment_record['kid_rewards'] = []
     experiment_record['test_rewards'] = []
 
     device = torch.device("cpu")
     model = build_model(CONFIG).to(device)
+    model_best = build_model(CONFIG)
+    best_test_score = 0
 
     # utility instead reward for update parameters (rank transformation)
     base = batchsize   # *2 for mirrored sampling
@@ -140,6 +144,9 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             print(
                 'Gen: ', g,
                 '| Net_R: %.1f' % test_rewards_mean) 
+            if test_rewards_mean > best_test_score:
+                best_test_score = test_rewards_mean
+                model_best.load_state_dict(model.state_dict())
         if test_rewards_mean >= CONFIG['eval_threshold']: break
         
         if (g-1)% 500 == 500 -1:
@@ -149,6 +156,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         if (g-1) % 1000 == 1000 -1:
             logging.info("Gen %s | storing model" % g)
             torch.save(model.state_dict(), model_storage_path+checkpoint_name + 'generation'+str(g)+'.pt')
+            torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
             with open(model_storage_path+"experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
@@ -157,6 +165,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     test_rewards_mean = np.mean(np.array(test_rewards))
     logging.info("test final model, Mean Reward of 100 times: %.1f" % test_rewards_mean)
 
+    torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
     print("runing 100 times")
     print("testing results :", test_rewards_mean)
     # ---------------SAVE---------
