@@ -30,7 +30,6 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
         model = base_model
     env.frameskip = 1
     observation = env.reset()
-    obs_list = [observation] * FRAME_SKIP
     break_is_true = False
     ep_r = 0.
     # print('k_id mid:', k_id,time.time()-start)
@@ -42,7 +41,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
         
         if test == True:
             ep_max_step = 18000
-        no_op_frames = np.random.randint(FRAME_SKIP, 30)
+        no_op_frames = np.random.randint(FRAME_SKIP+1, 30)
         for i in range(no_op_frames):
             # TODO: I think 0 is Null Action
             # but have not found any article about the meaning of every actions
@@ -51,7 +50,6 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
 
         for step in range(ep_max_step):
             action = model(ProcessU.to_torch_tensor())[0].argmax().item()
-            obs_list = []
             for i in range(FRAME_SKIP):
                 observation, reward , done, _ = env.step(action)
                 ProcessU.step(observation)

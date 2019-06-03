@@ -141,6 +141,7 @@ class ProcessUnit(object):
 
     def to_torch_tensor(self):
         assert len(self.frame_list) == self.length
+        assert self.previous_frame is not None
         x_list = self.frame_list
         frame_skip = self.length
         new_xlist = [np.maximum(self.previous_frame, x_list[0])]
