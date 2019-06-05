@@ -147,6 +147,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             if test_rewards_mean > best_test_score:
                 best_test_score = test_rewards_mean
                 model_best.load_state_dict(model.state_dict())
+                # save when found a better model
+                torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
         if test_rewards_mean >= CONFIG['eval_threshold']: break
         
         if (g-1)% 500 == 500 -1:
@@ -165,7 +167,6 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     test_rewards_mean = np.mean(np.array(test_rewards))
     logging.info("test final model, Mean Reward of 100 times: %.1f" % test_rewards_mean)
 
-    torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
     print("runing 100 times")
     print("testing results :", test_rewards_mean)
     # ---------------SAVE---------
