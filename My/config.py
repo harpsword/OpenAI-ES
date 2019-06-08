@@ -7,9 +7,9 @@ LR = 0.02
 SIGMA = 0.02
 #LR = 0.05
 #SIGMA = 0.05
+FRAME_SKIP = 4
 TIMESTEP_LIMIT = 1000000000
 
-FRAME_SKIP = 4
 
 CONFIG = [
     dict(game='Assault-v0', n_feature=None, observation=(250, 160), n_action=7, ep_max_step=1000,eval_threshold=2000),

@@ -67,7 +67,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     config = pd.read_csv('config.csv')
     CONFIG = dict()
     CONFIG['game'] = gamename + '-v0'
-    CONFIG['ep_max_step'] = 2000
+    # it's for training frames
+    CONFIG['ep_max_step'] = 1500
     CONFIG['eval_threshold'] = config[config['gamename']==gamename].iloc[0,1]
     CONFIG['l2coeff'] = 0.005
 

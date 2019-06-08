@@ -33,6 +33,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
     observation = env.reset()
     break_is_true = False
     ep_r = 0.
+    frame_count = 0
     # print('k_id mid:', k_id,time.time()-start)
     if ep_max_step is None:
         raise TypeError("test")
@@ -48,18 +49,20 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
             # but have not found any article about the meaning of every actions
             observation, reward, done, _ = env.step(0)
             ProcessU.step(observation)
+            frame_count += 1
 
         for step in range(ep_max_step):
             action = model(ProcessU.to_torch_tensor())[0].argmax().item()
             for i in range(FRAME_SKIP):
                 observation, reward , done, _ = env.step(action)
                 ProcessU.step(observation)
+                frame_count += 1
                 ep_r += reward
                 if done:
                     break_is_true = True
             if break_is_true:
                 break
-    return ep_r, step
+    return ep_r, frame_count
 
 def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
     # pass seed instead whole noise matrix to parallel will save your time
