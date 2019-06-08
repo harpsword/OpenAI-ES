@@ -139,8 +139,8 @@ class SimpleNet(nn.Module):
 class ProcessUnit(object):
 
     def __init__(self, length):
-        self.length = length
-        self.frame_list = deque(maxlen=length)
+        self.length = length * FRAME_SKIP
+        self.frame_list = deque(maxlen=self.length)
         self.previous_frame = None
 
     def step(self, x):

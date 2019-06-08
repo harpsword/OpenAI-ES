@@ -6,7 +6,8 @@ weight decay
 import numpy as np
 import torch
 from util import sign
-from model_15 import build_model, ProcessUnit
+from model_15 import build_model
+from preprocess import ProcessUnit
 import time
 from config import FRAME_SKIP
 
