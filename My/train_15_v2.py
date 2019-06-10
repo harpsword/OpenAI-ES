@@ -6,25 +6,28 @@ weight decay
 import numpy as np
 import torch
 from util import sign
-from model_13 import build_model, ProcessUnit
+from model_15_v2 import build_model
+from preprocess import ProcessUnit
 import time
 from config import FRAME_SKIP
+from noisetable import shared_noise_table 
 
 def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, test=False):
     # start = time.time()
     if seed_and_id is not None:
-        seed, k_id = seed_and_id
-        np.random.seed(seed)
+        index_seed, k_id = seed_and_id
         model = build_model(CONFIG)
         model.load_state_dict(base_model.state_dict())
         model.switch_to_train()
-        # model = base_model
+        model_size = model.get_size()
+        slice_dict = model.get_name_slice_dict()
+        noise_array = shared_noise_table.get(index_seed, model_size)
         with torch.no_grad():
             for name, params in model.named_parameters():
                 tmp = model
                 for attr_value in name.split('.'):
                     tmp = getattr(tmp, attr_value)
-                noise = torch.tensor(np.random.normal(0,1,tmp.size()), dtype=torch.float)
+                noise = torch.tensor(noise_array[slice_dict[name][0]:slice_dict[name][1]], dtype=torch.float).reshape(tmp.shape)
                 tmp.add_(noise*sigma*sign(k_id))
     else:
         model = base_model
@@ -32,9 +35,10 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
     observation = env.reset()
     break_is_true = False
     ep_r = 0.
+    frame_count = 0
     # print('k_id mid:', k_id,time.time()-start)
     if ep_max_step is None:
-        raise Typd1fb5562-8343-44c7-9dea-04f17a8a9c52eError("test")
+        raise TypeError("test")
     else:
         ProcessU = ProcessUnit(FRAME_SKIP)
         ProcessU.step(observation)
@@ -47,27 +51,32 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
             # but have not found any article about the meaning of every actions
             observation, reward, done, _ = env.step(0)
             ProcessU.step(observation)
+            frame_count += 1
 
         for step in range(ep_max_step):
             action = model(ProcessU.to_torch_tensor())[0].argmax().item()
             for i in range(FRAME_SKIP):
                 observation, reward , done, _ = env.step(action)
                 ProcessU.step(observation)
+                frame_count += 1
                 ep_r += reward
                 if done:
                     break_is_true = True
             if break_is_true:
                 break
-    return ep_r, step
+    return ep_r, frame_count
 
 def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
     # pass seed instead whole noise matrix to parallel will save your time
     # mirrored sampling
-    noise_seed = np.random.randint(0, 2 ** 32 - 1, size=N_KID, dtype=np.uint32).repeat(2)   
+    model_size = model.get_size()
+    slice_dict = model.get_name_slice_dict()
+    stream = np.random.RandomState()
+    index_seed = shared_noise_table.sample_index(stream, model_size, N_KID).repeat(2)
 
     # distribute training in parallel
     jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],sigma,CONFIG,
-                                          [noise_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
+                                          [index_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
     from config import timesteps_per_batch
     # N_KID means episodes_per_batch
     rewards = []
@@ -82,18 +91,18 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
     rank = np.arange(1, base + 1)
     util_ = np.maximum(0, np.log(base / 2 + 1) - np.log(rank))
     utility = util_ / util_.sum() - 1 / base
-
     kids_rank = np.argsort(rewards)[::-1]               # rank kid id by reward
 
     cumulative_update = {}       # initialize update values
     for ui, k_id in enumerate(kids_rank):
         # reconstruct noise using seed
         # torch.manual_seed(noise_seed[k_id])
-        np.random.seed(noise_seed[k_id])
+        noise_array = shared_noise_table.get(index_seed[k_id], model_size)
         for name, params in model.named_parameters():
             if not name in cumulative_update.keys():
                 cumulative_update[name] = torch.zeros_like(params, dtype=torch.float)
-            noise = torch.tensor(np.random.normal(0,1,params.size()), dtype=torch.float)
+            noise = torch.tensor(noise_array[slice_dict[name][0]:slice_dict[name][1]], dtype=torch.float).reshape(params.shape)
+            #noise = torch.tensor(np.random.normal(0,1,params.size()), dtype=torch.float)
             # cumulative_update[name].add_(utility[ui] * sign(k_id) * torch.randn_like(params))
             cumulative_update[name].add_(utility[ui]*sign(k_id)*noise)
     for name, params in cumulative_update.items():
