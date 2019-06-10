@@ -17,7 +17,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
     if seed_and_id is not None:
         index_seed, k_id = seed_and_id
         model = build_model(CONFIG)
-        model.load_state_dict(base_model.state_dict())
+        model.loadmultiprocessing.Array_state_dict(base_model.state_dict())
         model.switch_to_train()
         model_size = model.get_size()
         slice_dict = model.get_name_slice_dict()

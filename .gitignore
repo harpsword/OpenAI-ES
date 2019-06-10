@@ -3,4 +3,4 @@
 *.pickle
 *.pyc
 */log/*
-*/.idea/*
+*.xml
