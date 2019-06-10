@@ -57,9 +57,15 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     logging.info("learning rate: %s", lr)
     logging.info("sigma: %s", sigma)
     logging.info("Game name: %s", gamename)
+    logging.info("batchsie:", batchsize)
+    logging.info("ncpu:", ncpu)
+    logging.info("namemark", namemark)
     print("learning rate:",lr)
     print("sigma:", sigma)
     print("gamename:", gamename)
+    print("batchsie:", batchsize)
+    print("ncpu:", ncpu)
+    print("namemark", namemark)
 
     checkpoint_name = gamename + namemark + "-sigma" + str(sigma) +'-lr' + str(lr)
 
@@ -144,7 +150,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
 
         if g % 40 == 0:
         # if True:
-            test_times = 100 
+            test_times = 100
             test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
