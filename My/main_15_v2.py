@@ -127,8 +127,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     for g in range(generation):
         t0 = time.time()
         model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG)
-        timestep_count = timestep_count / 4
         training_timestep_count += timestep_count
+        timestep_count = timestep_count / 4
         if training_timestep_count > TIMESTEP_LIMIT:
             logging.info("satisfied timestep limit")
             logging.info("Now timestep %s" % training_timestep_count)
