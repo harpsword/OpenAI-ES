@@ -61,6 +61,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         from model_13_v2 import build_model
     setup_logging(logfile)
 
+    logging.info("modeltype: %s", modeltype)
     logging.info("learning rate: %s", lr)
     logging.info("sigma: %s", sigma)
     logging.info("Game name: %s", gamename)
@@ -101,8 +102,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     # test
     # print(model.get_name_slice_dict())
     # print("---------------------------")
-    for name, param in model.named_parameters():
-        print(name, "size:", param.shape)
+    # for name, param in model.named_parameters():
+    #     print(name, "size:", param.shape)
     # print("---------------------------")
 
     # utility instead reward for update parameters (rank transformation)
