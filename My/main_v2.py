@@ -188,11 +188,16 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     test_times = ncpu - 1
     test_rewards, _, _ = test(model, pool, env, test_times, CONFIG)
     test_rewards_mean = np.mean(np.array(test_rewards))
-    logging.info("test final model, Mean Reward of 100 times: %.1f" % test_rewards_mean)
+    logging.info("test final model, Mean Reward of %s times: %.1f" % (test_times, test_rewards_mean))
 
-    print("runing 100 times")
+    if test_rewards_mean > best_test_score:
+        best_test_score = test_rewards_mean
+        model_best.load_state_dict(model.state_dict())
+        logging.info("storing Best model")
+
     print("testing results :", test_rewards_mean)
     # ---------------SAVE---------
+    torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
     torch.save(model.state_dict(), model_storage_path+checkpoint_name + '.pt')
     with open(model_storage_path+"experiment_record"+str(namemark)+".pickle", "wb") as f:
         pickle.dump(experiment_record, f)
