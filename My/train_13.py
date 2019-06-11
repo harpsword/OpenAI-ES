@@ -34,7 +34,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
     ep_r = 0.
     # print('k_id mid:', k_id,time.time()-start)
     if ep_max_step is None:
-        raise Typd1fb5562-8343-44c7-9dea-04f17a8a9c52eError("test")
+        raise TypeError("test")
     else:
         ProcessU = ProcessUnit(FRAME_SKIP)
         ProcessU.step(observation)

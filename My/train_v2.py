@@ -6,18 +6,21 @@ weight decay
 import numpy as np
 import torch
 from util import sign
-from model_15_v2 import build_model
 from preprocess import ProcessUnit
 import time
 from config import FRAME_SKIP
 from noisetable import shared_noise_table 
 
-def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, test=False):
+def get_reward(modeltype, base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, test=False):
     # start = time.time()
     if seed_and_id is not None:
         index_seed, k_id = seed_and_id
+        if modeltype == '2015':
+            from model_15_v2 import build_model
+        elif modeltype == '2013':
+            from model_13_v2 import build_model
         model = build_model(CONFIG)
-        model.loadmultiprocessing.Array_state_dict(base_model.state_dict())
+        model.load_state_dict(base_model.state_dict())
         model.switch_to_train()
         model_size = model.get_size()
         slice_dict = model.get_name_slice_dict()
@@ -66,7 +69,7 @@ def get_reward(base_model, env, ep_max_step, sigma, CONFIG, seed_and_id=None, te
                 break
     return ep_r, frame_count
 
-def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
+def train(model, optimizer, pool, sigma, env, N_KID, CONFIG, modeltype):
     # pass seed instead whole noise matrix to parallel will save your time
     # mirrored sampling
     model_size = model.get_size()
@@ -75,7 +78,7 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
     index_seed = shared_noise_table.sample_index(stream, model_size, N_KID).repeat(2)
 
     # distribute training in parallel
-    jobs = [pool.apply_async(get_reward, ( model, env, CONFIG['ep_max_step'],sigma,CONFIG,
+    jobs = [pool.apply_async(get_reward, (modeltype ,model, env, CONFIG['ep_max_step'],sigma,CONFIG,
                                           [index_seed[k_id], k_id], )) for k_id in range(N_KID*2)]
     from config import timesteps_per_batch
     # N_KID means episodes_per_batch
@@ -119,7 +122,7 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG):
 
 def test(model, pool, env, test_times, CONFIG):
     # distribute training in parallel
-    jobs = [pool.apply_async(get_reward, (model, env, CONFIG['ep_max_step'], None, CONFIG, None, True)) for i in range(test_times)]
+    jobs = [pool.apply_async(get_reward, (None,model, env, CONFIG['ep_max_step'], None, CONFIG, None, True)) for i in range(test_times)]
     from config import timesteps_per_batch
     # N_KID means episodes_per_batch
     rewards = []

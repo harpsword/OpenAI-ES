@@ -1,6 +1,10 @@
 '''
 Frame skip = 4
 no limitation of timestep one batch
+
+
+1. separate ProcessUnit to preprocess.py
+2. add shared noise table
 '''
 import os
 import click
@@ -14,9 +18,8 @@ import torch.multiprocessing as mp
 mp.set_sharing_strategy('file_system')
 
 from config import N_POPULATION, N_GENERATION, LR, SIGMA, TIMESTEP_LIMIT
-from model_15_v2 import build_model
 from optimizer import SGD
-from train_15_v2 import train, get_reward, test
+from train_v2 import train, test
 
 torch.set_num_threads(1)
 LogFolder = os.path.join(os.getcwd(), 'log')
@@ -50,16 +53,20 @@ def setup_logging(logfile):
 @click.option("--vbn_test_g", default=10, help='the generation to estimation reference mean and var', type=int)
 @click.option("--gamename", default="Assualt-v0", help="the name of tested game")
 @click.option("--logfile", default="default.log", help='the file of log')
-# @click.option("--simple/--no-simple", default=True, help="use simple model or not")
-def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, gamename, logfile):
+@click.option("--modeltype", type=click.Choice(['2015', '2013']))
+def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, gamename, logfile,modeltype):
+    if modeltype == '2015':
+        from model_15_v2 import build_model
+    elif modeltype == '2013':
+        from model_13_v2 import build_model
     setup_logging(logfile)
 
     logging.info("learning rate: %s", lr)
     logging.info("sigma: %s", sigma)
     logging.info("Game name: %s", gamename)
-    logging.info("batchsie:", batchsize)
-    logging.info("ncpu:", ncpu)
-    logging.info("namemark", namemark)
+    logging.info("batchsie: %s", batchsize)
+    logging.info("ncpu:%s", ncpu)
+    logging.info("namemark:%s", namemark)
     print("learning rate:",lr)
     print("sigma:", sigma)
     print("gamename:", gamename)
@@ -94,8 +101,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     # test
     # print(model.get_name_slice_dict())
     # print("---------------------------")
-    # for name, param in model.named_parameters():
-    #     print(name, "size:", param.shape)
+    for name, param in model.named_parameters():
+        print(name, "size:", param.shape)
     # print("---------------------------")
 
     # utility instead reward for update parameters (rank transformation)
@@ -115,7 +122,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         logging.info("start test reference batch statistic")
         for g in range(vbn_test_g):
             t0 = time.time()
-            model, kid_rewards, _, _ = train(model, optimizer, pool, sigma, env, test_episodes, CONFIG)
+            model, kid_rewards, _, _ = train(model, optimizer, pool, sigma, env, test_episodes, CONFIG, modeltype)
             logging.info('Gen: %s | Kid_avg_R: %.1f | Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), time.time()-t0))
             print(
                 'Gen: ', g,
@@ -132,7 +139,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     training_timestep_count = 0
     for g in range(generation):
         t0 = time.time()
-        model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG)
+        model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG, modeltype)
         training_timestep_count += timestep_count
         timestep_count = timestep_count / 4
         if training_timestep_count > TIMESTEP_LIMIT:
