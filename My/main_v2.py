@@ -155,9 +155,9 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
              	  '| timestep number:', timestep_count,
                   '| Gen_T: %.2f' %(time.time() - t0))
 
-        if g % 40 == 0:
+        if g % 20 == 0:
         # if True:
-            test_times = 100
+            test_times = ncpu - 1
             test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
@@ -185,7 +185,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             with open(model_storage_path+"experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
-    test_times = ncpu 
+    test_times = ncpu - 1
     test_rewards, _, _ = test(model, pool, env, test_times, CONFIG)
     test_rewards_mean = np.mean(np.array(test_rewards))
     logging.info("test final model, Mean Reward of 100 times: %.1f" % test_rewards_mean)
