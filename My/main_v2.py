@@ -74,7 +74,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     print("ncpu:", ncpu)
     print("namemark", namemark)
 
-    checkpoint_name = gamename + namemark + "-sigma" + str(sigma) +'-lr' + str(lr)
+    checkpoint_name = gamename + namemark + "-sigma" + str(sigma) +'-lr' + str(lr)+'-model'+modeltype
 
     import pandas as pd
     config = pd.read_csv('config.csv')
