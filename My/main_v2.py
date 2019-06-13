@@ -98,6 +98,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     device = torch.device("cpu")
     model = build_model(CONFIG).to(device)
     model_best = build_model(CONFIG)
+    model_before = build_model(CONFIG)
     best_test_score = 0
 
     # utility instead reward for update parameters (rank transformation)
@@ -135,6 +136,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     best_kid_mean = 0
     for g in range(generation):
         t0 = time.time()
+        model_before.load_state_dict(model.state_dict())
         model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG, modeltype)
         training_timestep_count += timestep_count
         timestep_count = timestep_count / 4
@@ -151,9 +153,9 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
               '| episodes number:', episodes_number,
              	  '| timestep number:', timestep_count,
                   '| Gen_T: %.2f' %(time.time() - t0))
-        if kid_rewards_mean > best_kid_mean and g % 20 != 0:
+        if kid_rewards_mean > best_kid_mean:
             best_kid_mean = kid_rewards_mean
-            test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
+            test_rewards, timestep_count, episodes_number = test(model_before, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
             logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), episodes_number, timestep_count, time.time()-t0))
@@ -165,7 +167,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 '| Net_R: %.1f' % test_rewards_mean) 
             if test_rewards_mean > best_test_score:
                 best_test_score = test_rewards_mean
-                model_best.load_state_dict(model.state_dict())
+                model_best.load_state_dict(model_before.state_dict())
                 # save when found a better model
                 logging.info("Storing Best model")
                 torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
