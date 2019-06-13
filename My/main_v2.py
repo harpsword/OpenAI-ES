@@ -40,7 +40,8 @@ def setup_logging(logfile):
         logpath = os.path.join(LogFolder, logfile)
     logging.basicConfig(filename=logpath,
                         level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
+            2019-6-13-2.log
+            format='%(asctime)s - %(levelname)s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
  
@@ -120,7 +121,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         logging.info("start test reference batch statistic")
         for g in range(vbn_test_g):
             t0 = time.time()
-            model, kid_rewards, _, _ = train(model, optimizer, pool, sigma, env, test_episodes, CONFIG, modeltype)
+            model, kid_rewards, _ = train(model, optimizer, pool, sigma, env, test_episodes, CONFIG, modeltype)
             logging.info('Gen: %s | Kid_avg_R: %.1f | Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), time.time()-t0))
             print(
                 'Gen: ', g,
