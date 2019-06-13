@@ -41,7 +41,7 @@ def setup_logging(logfile):
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
-
+ 
 @click.command()
 @click.argument("namemark")
 @click.option("--ncpu", default=mp.cpu_count()-1, help='The number of cores', type=int)
@@ -85,6 +85,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     CONFIG['ep_max_step'] = 1500
     CONFIG['eval_threshold'] = config[config['gamename']==gamename].iloc[0,1]
     CONFIG['l2coeff'] = 0.005
+    test_times = ncpu - 1
 
     logging.info("Settings: %s", str(CONFIG))
 
@@ -98,13 +99,6 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     model = build_model(CONFIG).to(device)
     model_best = build_model(CONFIG)
     best_test_score = 0
-
-    # test
-    # print(model.get_name_slice_dict())
-    # print("---------------------------")
-    # for name, param in model.named_parameters():
-    #     print(name, "size:", param.shape)
-    # print("---------------------------")
 
     # utility instead reward for update parameters (rank transformation)
     base = batchsize   # *2 for mirrored sampling
@@ -138,6 +132,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     # training
     mar = None      # moving average reward
     training_timestep_count = 0
+    best_kid_mean = 0
     for g in range(generation):
         t0 = time.time()
         model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG, modeltype)
@@ -147,6 +142,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             logging.info("satisfied timestep limit")
             logging.info("Now timestep %s" % training_timestep_count)
             break
+        kid_rewards_mean = np.array(kid_rewards).mean()
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         if g % 5 == 0:
             logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), episodes_number, timestep_count, time.time()-t0))
@@ -155,10 +151,24 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
               '| episodes number:', episodes_number,
              	  '| timestep number:', timestep_count,
                   '| Gen_T: %.2f' %(time.time() - t0))
-
+        if kid_rewards_mean > best_kid_mean and g % 20 != 0:
+            best_kid_mean = kid_rewards_mean
+            test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
+            test_rewards_mean = np.mean(np.array(test_rewards))
+            experiment_record['test_rewards'].append([g, test_rewards])
+            logging.info("test model, Reward: %.1f" % test_rewards_mean)
+            logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
+            print(
+                'Gen: ', g,
+                '| Net_R: %.1f' % test_rewards_mean) 
+            if test_rewards_mean > best_test_score:
+                best_test_score = test_rewards_mean
+                model_best.load_state_dict(model.state_dict())
+                # save when found a better model
+                logging.info("Storing Best model")
+                torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
+        
         if g % 20 == 0:
-        # if True:
-            test_times = ncpu - 1
             test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
@@ -186,7 +196,6 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             with open(model_storage_path+"experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
-    test_times = ncpu - 1
     test_rewards, _, _ = test(model, pool, env, test_times, CONFIG)
     test_rewards_mean = np.mean(np.array(test_rewards))
     logging.info("test final model, Mean Reward of %s times: %.1f" % (test_times, test_rewards_mean))
