@@ -118,7 +118,7 @@ def train(model, optimizer, pool, sigma, env, N_KID, CONFIG, modeltype):
             tmp = getattr(tmp, attr_value)
         cumulative_update[name].add_(-CONFIG['l2coeff']*tmp)
     optimizer.update_model_parameters(model, cumulative_update)
-    return model, rewards, timesteps_count, len(rewards)
+    return model, rewards, timesteps_count
 
 
 def test(model, pool, env, test_times, CONFIG):
@@ -134,4 +134,4 @@ def test(model, pool, env, test_times, CONFIG):
         timesteps.append(j.get()[1])
         timesteps_count += j.get()[1]
     
-    return rewards, timesteps_count, len(rewards)
+    return rewards, timesteps_count

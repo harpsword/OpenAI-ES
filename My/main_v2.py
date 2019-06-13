@@ -25,6 +25,8 @@ torch.set_num_threads(1)
 LogFolder = os.path.join(os.getcwd(), 'log')
 model_storage_path = '/home/yyl/model/es-rl/'
 
+Small_value = -1000
+
 
 def setup_logging(logfile):
     if logfile == 'default.log':
@@ -99,7 +101,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     model = build_model(CONFIG).to(device)
     model_best = build_model(CONFIG)
     model_before = build_model(CONFIG)
-    best_test_score = 0
+    best_test_score = Small_value
 
     # utility instead reward for update parameters (rank transformation)
     base = batchsize   # *2 for mirrored sampling
@@ -133,11 +135,11 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     # training
     mar = None      # moving average reward
     training_timestep_count = 0
-    best_kid_mean = 0
+    best_kid_mean = Small_value 
     for g in range(generation):
         t0 = time.time()
         model_before.load_state_dict(model.state_dict())
-        model, kid_rewards, timestep_count, episodes_number = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG, modeltype)
+        model, kid_rewards, timestep_count = train(model, optimizer, pool, sigma, env, int(batchsize/2), CONFIG, modeltype)
         training_timestep_count += timestep_count
         timestep_count = timestep_count / 4
         if training_timestep_count > TIMESTEP_LIMIT:
@@ -147,18 +149,18 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         kid_rewards_mean = np.array(kid_rewards).mean()
         experiment_record['kid_rewards'].append([g, np.array(kid_rewards).mean()])
         if g % 5 == 0:
-            logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), episodes_number, timestep_count, time.time()-t0))
+            logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), batchsize, timestep_count, time.time()-t0))
             print('Gen:', g,
               '| Kid_avg_R: %.1f' % np.array(kid_rewards).mean(),
-              '| episodes number:', episodes_number,
+              '| episodes number:', batchsize,
              	  '| timestep number:', timestep_count,
                   '| Gen_T: %.2f' %(time.time() - t0))
         if kid_rewards_mean > best_kid_mean:
             best_kid_mean = kid_rewards_mean
-            test_rewards, timestep_count, episodes_number = test(model_before, pool, env, test_times, CONFIG)
+            test_rewards, timestep_count = test(model_before, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
-            logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), episodes_number, timestep_count, time.time()-t0))
+            logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), batchsize, timestep_count, time.time()-t0))
             
             logging.info("test model, Reward: %.1f" % test_rewards_mean)
             logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
@@ -173,7 +175,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
         
         if g % 20 == 0:
-            test_rewards, timestep_count, episodes_number = test(model, pool, env, test_times, CONFIG)
+            test_rewards, timestep_count = test(model, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
             logging.info("test model, Reward: %.1f" % test_rewards_mean)
@@ -200,7 +202,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             with open(model_storage_path+"experiment_record"+checkpoint_name+'generation'+str(g)+".pickle", "wb") as f:
                 pickle.dump(experiment_record, f)
     
-    test_rewards, _, _ = test(model, pool, env, test_times, CONFIG)
+    test_rewards, _ = test(model, pool, env, test_times, CONFIG)
     test_rewards_mean = np.mean(np.array(test_rewards))
     logging.info("test final model, Mean Reward of %s times: %.1f" % (test_times, test_rewards_mean))
 
