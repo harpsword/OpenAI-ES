@@ -48,6 +48,7 @@ def get_reward(modeltype, base_model, env, ep_max_step, sigma, CONFIG, seed_and_
         
         if test == True:
             ep_max_step = 18000
+        #no_op_frames = np.random.randint(FRAME_SKIP+1, 30)
         no_op_frames = np.random.randint(0, 30)
         for i in range(no_op_frames):
             # TODO: I think 0 is Null Action
