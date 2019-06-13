@@ -40,8 +40,7 @@ def setup_logging(logfile):
         logpath = os.path.join(LogFolder, logfile)
     logging.basicConfig(filename=logpath,
                         level=logging.INFO,
-            2019-6-13-2.log
-            format='%(asctime)s - %(levelname)s - %(message)s',
+                        format='%(asctime)s - %(levelname)s - %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
  
