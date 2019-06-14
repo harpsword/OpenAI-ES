@@ -174,7 +174,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 logging.info("Storing Best model")
                 torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
         
-        if g % 20 == 0:
+        if g % 5 == 0:
             test_rewards, timestep_count = test(model, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
