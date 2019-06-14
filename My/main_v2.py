@@ -157,7 +157,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                   '| Gen_T: %.2f' %(time.time() - t0))
         if kid_rewards_mean > best_kid_mean:
             best_kid_mean = kid_rewards_mean
-            test_rewards, timestep_count = test(model_before, pool, env, test_times, CONFIG)
+            test_rewards, _= test(model_before, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
             logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), batchsize, timestep_count, time.time()-t0))
@@ -173,6 +173,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 # save when found a better model
                 logging.info("Storing Best model")
                 torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
+            logging.info("best model now:%s" % bset_test_score)
         
         if g % 5 == 0:
             test_rewards, timestep_count = test(model, pool, env, test_times, CONFIG)
