@@ -136,6 +136,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
     mar = None      # moving average reward
     training_timestep_count = 0
     best_kid_mean = Small_value 
+    test_result_list = []
     for g in range(generation):
         t0 = time.time()
         model_before.load_state_dict(model.state_dict())
@@ -160,10 +161,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
             test_rewards, _= test(model_before, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
-            logging.info('Gen: %s | Kid_avg_R: %.1f | Episodes Number: %s | timestep number: %s| Gen_T: %.2f' % (g, np.array(kid_rewards).mean(), batchsize, timestep_count, time.time()-t0))
-            
-            logging.info("test model, Reward: %.1f" % test_rewards_mean)
-            logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
+            logging.info("Gen: %s, test model, Reward: %.1f" % (g, test_rewards_mean))
+            #logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
             print(
                 'Gen: ', g,
                 '| Net_R: %.1f' % test_rewards_mean) 
@@ -171,16 +170,15 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 best_test_score = test_rewards_mean
                 model_best.load_state_dict(model_before.state_dict())
                 # save when found a better model
-                logging.info("Storing Best model")
+                #logging.info("Storing Best model")
                 torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
-            logging.info("best model now:%s" % bset_test_score)
         
         if g % 5 == 0:
             test_rewards, timestep_count = test(model, pool, env, test_times, CONFIG)
             test_rewards_mean = np.mean(np.array(test_rewards))
             experiment_record['test_rewards'].append([g, test_rewards])
-            logging.info("test model, Reward: %.1f" % test_rewards_mean)
-            logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
+            #logging.info("test model, Reward: %.1f" % test_rewards_mean)
+            test_result_list.append(test_rewards_mean)
             print(
                 'Gen: ', g,
                 '| Net_R: %.1f' % test_rewards_mean) 
@@ -188,9 +186,13 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 best_test_score = test_rewards_mean
                 model_best.load_state_dict(model.state_dict())
                 # save when found a better model
-                logging.info("Storing Best model")
+                #logging.info("Storing Best model")
                 torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
-        #if test_rewards_mean >= CONFIG['eval_threshold']: break
+        if g % 40 == 0:
+            logging.info("train progross %s/%s" % (training_timestep_count, TIMESTEP_LIMIT))
+            logging.info("best test result:%s" % best_test_score)
+            logging.info("test result:%s" % str(test_result_list))
+            test_result_list = []
         
         if (g-1)% 500 == 500 -1:
             CONFIG['ep_max_step'] += 150
@@ -212,7 +214,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         model_best.load_state_dict(model.state_dict())
         logging.info("storing Best model")
 
-    print("testing results :", test_rewards_mean)
+    print("best test results :", test_rewards_mean)
     # ---------------SAVE---------
     torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
     torch.save(model.state_dict(), model_storage_path+checkpoint_name + '.pt')
