@@ -129,8 +129,7 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
                 '| Gen_T: %.2f' % (time.time() - t0),)
         # reinit model and optimizer
         optimizer.zero_grad()
-        model.switch_to_train()
-        model._initialize_weights()
+        model.switch_to_vbn()
     
     # training
     mar = None      # moving average reward

@@ -76,9 +76,10 @@ class ESNet(nn.Module):
     def finish_one_game(self):
         self.previous_frame = None
 
-    def switch_to_train(self):
+    def switch_to_vbn(self):
         self.vbn1.set_mean_var_from_bn(self.bn1)
         self.vbn2.set_mean_var_from_bn(self.bn2)
+        self.vbn3.set_mean_var_from_bn(self.bn3)
         self.status = 'vbn'
     
     def forward(self, x):

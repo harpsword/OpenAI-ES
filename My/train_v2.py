@@ -21,7 +21,7 @@ def get_reward(modeltype, base_model, env, ep_max_step, sigma, CONFIG, seed_and_
             from model_13_v2 import build_model
         model = build_model(CONFIG)
         model.load_state_dict(base_model.state_dict())
-        model.switch_to_train()
+        model.switch_to_vbn()
         model_size = model.get_size()
         slice_dict = model.get_name_slice_dict()
         noise_array = shared_noise_table.get(index_seed, model_size)

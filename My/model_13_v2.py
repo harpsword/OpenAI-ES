@@ -65,7 +65,7 @@ class ESNet(nn.Module):
     def finish_one_game(self):
         self.previous_frame = None
 
-    def switch_to_train(self):
+    def switch_to_vbn(self):
         self.vbn1.set_mean_var_from_bn(self.bn1)
         self.vbn2.set_mean_var_from_bn(self.bn2)
         self.status = 'vbn'
@@ -81,11 +81,6 @@ class ESNet(nn.Module):
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                if m.weight is not None:
-                    m.weight.data.fill_(1)
                 if m.bias is not None:
                     m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
