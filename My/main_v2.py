@@ -213,7 +213,8 @@ def main(namemark, ncpu, batchsize, generation, lr, sigma, vbn, vbn_test_g, game
         model_best.load_state_dict(model.state_dict())
         logging.info("storing Best model")
 
-    print("best test results :", test_rewards_mean)
+    print("best test results :", best_test_score)
+    logging.info("best test results:%s" % best_test_score)
     # ---------------SAVE---------
     torch.save(model_best.state_dict(), model_storage_path+checkpoint_name+'best_model.pt')
     torch.save(model.state_dict(), model_storage_path+checkpoint_name + '.pt')
