@@ -1,0 +1,101 @@
+
+{
+    "Assault-v0":{
+        "game":"Assualt-v0",
+        "ep_max_step":1000,
+        "eval_threshold":1800,
+        "l2coeff":0.005
+    },
+    "Amidar-v0":{
+        "game":"Amidar-v0",
+        "ep_max_step":1000,
+        "eval_threshold":130,
+        "l2coeff":0.005
+    },
+    "BeamRider-v0":{
+        "ep_max_step":1000,
+        "eval_threshold": 10000,
+        "l2coeff":0.005
+    },
+    "Asteroids-v0":{
+        "ep_max_step":1000,
+        "eval_threshold": 1570,
+        "l2coeff":0.005
+    },
+    "Boxing-v0":{
+        "ep_max_step": 1000,
+        "eval_threshold": 50,
+        "l2coeff":0.005
+    },
+    "Berzerk-v0":{
+        "ep_max_step": 1000,
+        "eval_threshold": 700,
+        "l2coeff":0.005
+    },
+    "Bowling-v0":{
+        "ep_max_step": 1000,
+        "eval_threshold": 140,
+        "l2coeff":0.005
+    },
+    "Breakout-v0":{
+        "ep_max_step": 1000,
+        "eval_threshold": 300,
+        "l2coeff":0.005
+    },
+    "Centipede-v0":{
+        "ep_max_step": 1000,
+        "eval_threshold": 7780,
+        "l2coeff":0.005
+    },
+    "Asterix-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":1440,
+        "l2coeff":0.005
+    },
+    "Atlantis-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":1267410,
+        "l2coeff":0.005
+    },
+    "BankHeist-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":225,
+        "l2coeff":0.005
+    },
+    "BattleZone-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":16600,
+        "l2coeff":0.005
+    },
+    "ChopperCommand-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":3710,
+        "l2coeff":0.005
+    },
+    "CrazyClimber-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":26430,
+        "l2coeff":0.005
+    },
+    "DemonAttack-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":1166,
+        "l2coeff":0.005
+    },
+    "DoubleDunk-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":0.2,
+        "l2coeff":0.005
+    },
+    "Enduro-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":95,
+        "l2coeff":0.005
+    },
+    "FishingDerby-v0":{
+        "ep_max_step":1000,
+        "eval_threshold":49,
+        "l2coeff":0.005
+    }
+}
+
