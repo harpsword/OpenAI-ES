@@ -26,11 +26,11 @@ class ESNet(nn.Module):
         self.conv2 = nn.Conv2d(self.conv1_f, self.conv2_f, kernel_size=4, stride=2)
         self.bn1 = nn.BatchNorm2d(self.conv1_f, affine=False)
         self.bn2 = nn.BatchNorm2d(self.conv2_f, affine=False)
-        self.bn3 = nn.BatchNorm1d(1, affine=False)
+        self.bn3 = nn.BatchNorm1d(256, affine=False)
 
         self.vbn1 = VirtualBatchNorm2D(self.conv1_f)
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
-        self.vbn3 = VirtualBatchNorm1D(1)
+        self.vbn3 = VirtualBatchNorm1D(256)
 
         self.fc1 = nn.Linear(9*9*32, 256)
         self.fc2 = nn.Linear(256, CONFIG['n_action'])
@@ -48,7 +48,8 @@ class ESNet(nn.Module):
         x = F.relu(x)
 
         x = x.view(-1, 9*9*32) 
-        x = self.bn3(self.fc1(x))
+        x = self.fc1(x)
+        x = self.bn3(x)
         x = F.relu(x)
         x = self.fc2(x)
         return F.softmax(x, dim=1)

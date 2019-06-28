@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from config import SIMPLE_GAME, GRAPH_GAME, FRAME_SKIP
-from vbn import VirtualBatchNorm2D
+from vbn import VirtualBatchNorm2D, VirtualBatchNorm1D
 from collections import deque
 
 
@@ -23,6 +23,8 @@ class ESNet(nn.Module):
         self.conv1_f = 32 
         self.conv2_f = 64
         self.conv3_f = 64
+        self.conv_out = 7*7*64
+        self.fc1_f = 512
         # output: 20x20x32
         self.conv1 = nn.Conv2d(FRAME_SKIP, self.conv1_f, kernel_size=8, stride=4)
         # output: 9x9x64
@@ -32,12 +34,12 @@ class ESNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(self.conv1_f, affine=False)
         self.bn2 = nn.BatchNorm2d(self.conv2_f, affine=False)
         self.bn3 = nn.BatchNorm2d(self.conv3_f, affine=False)
+        self.bn4 = nn.BatchNorm1d(self.fc1_f, affine=False)
 
         self.vbn1 = VirtualBatchNorm2D(self.conv1_f)
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
         self.vbn3 = VirtualBatchNorm2D(self.conv3_f)
-        self.conv_out = 7*7*64
-        self.fc1_f = 512
+        self.vbn4 = VirtualBatchNorm1D(self.fc1_f)
 
         self.fc1 = nn.Linear(self.conv_out, self.fc1_f)
         self.fc2 = nn.Linear(self.fc1_f, CONFIG['n_action'])
@@ -57,7 +59,9 @@ class ESNet(nn.Module):
         x = F.relu(x)
 
         x = x.view(-1, self.conv_out) 
-        x = F.relu(self.fc1(x))
+        x = self.bn4(self.fc1(x))
+        x = F.relu(x)
+
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
@@ -69,7 +73,8 @@ class ESNet(nn.Module):
         x = self.vbn3(self.conv3(x))
         x = F.relu(x)
         x = x.view(-1, self.conv_out)
-        x = F.relu(self.fc1(x))
+        x = self.vbn4(self.fc1(x))
+        x = F.relu(x)
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
@@ -77,6 +82,7 @@ class ESNet(nn.Module):
         self.vbn1.set_mean_var_from_bn(self.bn1)
         self.vbn2.set_mean_var_from_bn(self.bn2)
         self.vbn3.set_mean_var_from_bn(self.bn3)
+        self.vbn4.set_mean_var_from_bn(self.bn4)
         self.status = 'vbn'
 
     def switch_to_bn(self):
