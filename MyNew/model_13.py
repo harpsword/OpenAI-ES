@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from config import SIMPLE_GAME, GRAPH_GAME, FRAME_SKIP
-from vbn import VirtualBatchNorm2D
+from vbn import VirtualBatchNorm2D, VirtualBatchNorm1D
 from collections import deque
 
 
@@ -26,9 +26,11 @@ class ESNet(nn.Module):
         self.conv2 = nn.Conv2d(self.conv1_f, self.conv2_f, kernel_size=4, stride=2)
         self.bn1 = nn.BatchNorm2d(self.conv1_f, affine=False)
         self.bn2 = nn.BatchNorm2d(self.conv2_f, affine=False)
+        self.bn3 = nn.BatchNorm1d(1, affine=False)
 
         self.vbn1 = VirtualBatchNorm2D(self.conv1_f)
         self.vbn2 = VirtualBatchNorm2D(self.conv2_f)
+        self.vbn3 = VirtualBatchNorm1D(1)
 
         self.fc1 = nn.Linear(9*9*32, 256)
         self.fc2 = nn.Linear(256, CONFIG['n_action'])
@@ -46,7 +48,8 @@ class ESNet(nn.Module):
         x = F.relu(x)
 
         x = x.view(-1, 9*9*32) 
-        x = F.relu(self.fc1(x))
+        x = self.bn3(self.fc1(x))
+        x = F.relu(x)
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
@@ -56,13 +59,15 @@ class ESNet(nn.Module):
         x = self.vbn2(self.conv2(x))
         x = F.relu(x)
         x = x.view(-1, 9*9*32)
-        x = F.relu(self.fc1(x))
+        x = self.vbn3(self.fc1(x))
+        x = F.relu(x)
         x = self.fc2(x)
         return F.softmax(x, dim=1)
 
     def switch_to_vbn(self):
         self.vbn1.set_mean_var_from_bn(self.bn1)
         self.vbn2.set_mean_var_from_bn(self.bn2)
+        self.vbn3.set_mean_var_from_bn(self.bn3)
         self.status = 'vbn'
 
     def switch_to_bn(self):

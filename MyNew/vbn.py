@@ -43,3 +43,41 @@ class VirtualBatchNorm2D(nn.Module):
         if input.dim() != 4:
             raise ValueError('expected 4D input (got {}D input)'
                              .format(input.dim()))
+
+
+class VirtualBatchNorm1D(nn.Module):
+
+    def __init__(self, num_features):
+        super(VirtualBatchNorm1D, self).__init__()
+        self.named_features = num_features
+        self.weight = nn.Parameter(torch.Tensor(num_features))
+        self.bias = nn.Parameter(torch.Tensor(num_features))
+
+        self.register_buffer('mean', torch.zeros(num_features))
+        self.register_buffer('var', torch.ones(num_features))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        init.uniform_(self.weight)
+        init.zeros_(self.bias)
+        self.mean.zero_()
+        self.var.fill_(1)
+    
+    def set_mean_var(self, mean, var):
+        self.mean = mean
+        self.var = var
+    
+    def set_mean_var_from_bn(self, bn):
+        # setup reference batch's mean and var
+        self.mean = bn.running_mean
+        self.var = bn.running_var
+
+    def forward(self, input):
+        # using reference batch's mean and var
+        self._check_input_dim(input)
+        return F.batch_norm(input, self.mean, self.var, self.weight, self.bias)
+
+    def _check_input_dim(self, input):
+        if input.dim() != 2:
+            raise ValueError('expected 2D input (got {}D input)'
+                             .format(input.dim()))
