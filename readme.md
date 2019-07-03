@@ -1,6 +1,29 @@
 
 # Evolution Strategies for Reinforcement Learning
 
+## 机制说明
+
+My文件夹下采用的vbn机制：
+
+fc1无bn层
+
+1. collect reference mean and var: 在训练之前，模型为bn模式，按照训练的方式与环境进行10代，10代之后将模型中的bn层参数(mean,variance)作为reference mean与variance
+2. 之后，模型切换到vbn模式，在正常forward时，将当前帧的mean和var与reference mean、var做平均。
+
+MyNew文件夹下采用的vbn机制为
+
+fc1有bn层
+
+1. collect reference: 在训练之前，采用随机策略来与环境进行交互，每一帧按照1%的概率被选入到reference frames set里，集合大小为128.
+2. 在forward的时候，先将reference frames set输入(bn模式)，计算reference mean and variance，再切换到vbn模式，在正常forward时，直接使用reference mean and variance。
+
+MyNew2文件夹下采用的vbn机制为
+
+fc1有bn层
+
+1. collect reference: 在训练之前，采用随机策略来与环境进行交互，每一帧按照1%的概率被选入到reference frames set里，集合大小为128.
+2. 在forward的时候，先将reference frames set输入(bn模式)，计算reference mean and variance，再切换到vbn模式，在正常forward时，将当前帧的mean和var与reference mean、var做平均。
+
 ## Note for implementation
 
 1. use numpy.random.normal instead of torch.randn_like
@@ -15,9 +38,16 @@
 4. torch(1.0)
 5. torchvision
 
+## Note
 
-### selected Game
+Notice:
 
-| Game Name | objective performance | performance of mine | timestep one batch | lr | sigma | batchsize | Comment |
-| Amidar-v0 |  112.0                |       110.8         |    10w             |  0.01 | 0.02  |  400      | No weight decay |
-  
+1. multi-core
+2. with batch normalization
+3. use np.random.normal to represent torch.randn_like
+
+Please make sure OMP_NUM_THREADS=1
+or run 
+
+export OMP_NUM_THREADS=1
+
