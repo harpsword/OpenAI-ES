@@ -1,6 +1,16 @@
 
 # Evolution Strategies for Reinforcement Learning
 
+## Environment
+
+Atari: 
+1. My 
+2. MyNew
+3. MyNew2 
+
+MuJoCo
+1. mujoco(MyNew2's mujoco version)
+
 ## 机制说明
 
 My文件夹下采用的vbn机制：
