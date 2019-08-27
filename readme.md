@@ -6,9 +6,9 @@
 
 伪代码
 
-![1566922707019](E:\ResearchProgram\OpenAI-ES\assets\1566922707019.png)
+![1566922707019](.\assets\1566922707019.png)
 
-![1566922722175](E:\ResearchProgram\OpenAI-ES\assets\1566922722175.png)
+![1566922722175](.\assets\1566922722175.png)
 
 ### 注意
 
