@@ -1,63 +1,88 @@
+# OpenAI-ES
 
-# Evolution Strategies for Reinforcement Learning
+该项目为OpenAI-ES[1]的pytorch实现。其中mujoco目录为mujoco测试环境下的代码，atari目录为atari环境下的代码，others下为其他人的项目代码。
 
-## Environment
+## 算法相关
 
-Atari: 
-1. My 
-2. MyNew
-3. MyNew2 
+伪代码
 
-MuJoCo
-1. mujoco(MyNew2's mujoco version)
+![1566922707019](E:\ResearchProgram\OpenAI-ES\assets\1566922707019.png)
 
-## 机制说明
+![1566922722175](E:\ResearchProgram\OpenAI-ES\assets\1566922722175.png)
 
-My文件夹下采用的vbn机制：
+### 注意
 
-fc1无bn层
+经过文献调研没有发现对VBN机制在该论文中的具体实现，复现采用的vbn机制如下：
 
-1. collect reference mean and var: 在训练之前，模型为bn模式，按照训练的方式与环境进行10代，10代之后将模型中的bn层参数(mean,variance)作为reference mean与variance
-2. 之后，模型切换到vbn模式，在正常forward时，将当前帧的mean和var与reference mean、var做平均。
+1. fc1有bn层
+2. collect reference: 在训练之前，采用随机策略来与环境进行交互，每一帧按照1%的概率被选入到reference frames set里，集合大小为128.
+3. 在forward的时候，先将reference frames set输入(bn模式)，计算reference mean and variance，再切换到vbn模式，在正常forward时，将当前帧的mean和var与reference mean、var做平均。
 
-MyNew文件夹下采用的vbn机制为
+## Atari测试结果
 
-fc1有bn层
+result1、result2、result3分别为三次训练中的多次测试结果平均值，三次训练采用不同的随机数种子。在所有项目上的总平均性能达到了原文性能的159%。
 
-1. collect reference: 在训练之前，采用随机策略来与环境进行交互，每一帧按照1%的概率被选入到reference frames set里，集合大小为128.
-2. 在forward的时候，先将reference frames set输入(bn模式)，计算reference mean and variance，再切换到vbn模式，在正常forward时，直接使用reference mean and variance。
+| Game name        | objective | result 1 | result 2 | result 3 | mean         | percent      |
+| ---------------- | --------- | -------- | -------- | -------- | ------------ | ------------ |
+| Amidar           | 112       | 309      | 249.8    | 248.8    | 269.2        | 240.3571429  |
+| Assault          | 1673.9    | 863.7    | 866      | 843      | 857.5666667  | 51.23165462  |
+| Asterix          | 1440      | 1033.8   | 2227.4   | 1229     | 1496.733333  | 103.9398148  |
+| Asteroids        | 1562      | 1053     | 1266.1   | 1131.7   | 1150.266667  | 73.64063167  |
+| Atlantis         | 1267410   | 63123    | 63030    | 67051    | 64401.33333  | 5.081333849  |
+| Bank Heist       | 225       | 62.34    | 66.59    | 93.3     | 74.07666667  | 32.92296296  |
+| Battle Zone      | 16600     | 10255    | 9106.38  | 11000    | 10120.46     | 60.96662651  |
+| BeamRider        | 744       | 851      | 781.9    | 872      | 834.9666667  | 112.2267025  |
+| Berzerk          | 686       | 786      | 939.7    | 838.8    | 854.8333333  | 124.6112731  |
+| Bowling          | 30        | 153      | 160      | 159.2    | 157.4        | 524.6666667  |
+| Boxing           | 49.8      | 37.1     | 41.6     | 35.2     | 37.96666667  | 76.23828648  |
+| Breakout         | 9.5       | 2.66     | 2.56     | 2.54     | 2.586666667  | 27.22807018  |
+| Centipede        | 7783.9    | 10430    | 10181.29 | 10755    | 10455.43     | 134.3212271  |
+| Chopper Command  | 3710      | 1346     | 1578.7   | 1200     | 1374.9       | 37.05929919  |
+| Crazy Climber    | 26430     | 29522    | 28442.8  | 29253    | 29072.6      | 109.9984866  |
+| Demon Attack     | 1166.5    | 943      | 1038.5   | 920      | 967.1666667  | 82.91184455  |
+| Double Dunk      | 0.2       | -0.76    | -0.71    | 0        | -0.49        | -245         |
+| Enduro           | 95        | 81.9     | 76.38    | 79.3     | 79.19333333  | 83.36140351  |
+| Fishing Derby    | 49        | -39.7    | -53.5    | -48.4    | -47.2        | -96.32653061 |
+| Freeway          | 31        | 23.66    | 23.6     | 24.3     | 23.85333333  | 76.94623656  |
+| Frostbite        | 370       | 268      | 3795     | 3764     | 2609         | 705.1351351  |
+| Gopher           | 582       | 453      | 541      | 540      | 511.3333333  | 87.85796105  |
+| Gravitar         | 805       | 560      | 476.59   | 517.1    | 517.8966667  | 64.33498965  |
+| IceHockey        | 4.1       | 3.17     | 2.8      | 3.09     | 3.02         | 73.65853659  |
+| Kangaroo         | 11200     | 1917     | 4476.9   | 1174.1   | 2522.666667  | 22.52380952  |
+| Krull            | 8647.2    | 4809     | 3539.3   | 3554     | 3967.433333  | 45.88113301  |
+| MontezumaRevenge | 0         | 0        | 0        | 0        | 0            | 0            |
+| NameThisGame     | 4503      | 3280     | 5548.7   | 3280     | 4036.233333  | 89.63431786  |
+| Phoenix          | 4041      | 1747     | 2203     | 2123     | 2024.333333  | 50.09486101  |
+| Pitfall          | 0         | 0        | 0        | 0        | 0            | 0            |
+| Pong             | 21        | -17      | -19.08   | -17      | -17.69333333 | -84.25396825 |
+| PrivateEye       | 100       | 100      | 5142     | 5301     | 3514.333333  | 3514.333333  |
+| Qbert            | 147.5     | 425      | 1083     | 834      | 780.6666667  | 529.2655367  |
+| Riverraid        | 5009      | 2315     | 2034     | 2164     | 2171         | 43.34198443  |
+| RoadRunner       | 16590     | 14523    | 18509    | 13885    | 15639        | 94.2676311   |
+| Robotank         | 11.9      | 16.8     | 17.8     | 16.3     | 16.96666667  | 142.5770308  |
+| Seaquest         | 1390      | 794      | 789.2    | 858      | 813.7333333  | 58.54196643  |
+| Skiing           | 15442     | -8909    | -8905    | -8910    | -8908        | -57.68682813 |
+| Solaris          | 2090      | 4268     | 3402     | 3783     | 3817.666667  | 182.6634769  |
+| SpaceInvaders    | 678       | 754.6    | 683      | 614      | 683.8666667  | 100.8652901  |
+| StarGunner       | 1470      | 976.4    | 1010.6   | 959      | 982          | 66.80272109  |
+| Tennis           | 4.5       | 0        | 0        | 0        | 0            | 0            |
+| TimePilot        | 4970      | 8903     | 8519.4   | 8177     | 8533.133333  | 171.6928236  |
+| Tutankham        | 130.3     | 133      | 150.84   | 112.3    | 132.0466667  | 101.3404963  |
+| UpNDown          | 67974     | 13525    | 12712    | 14059    | 13432        | 19.76049666  |
+| Venture          | 760       | 405      | 451      | 535      | 463.6666667  | 61.00877193  |
+| VideoPinball     | 22834.8   | 12067    | 14089    | 12209    | 12788.33333  | 56.00370195  |
+| WizardOfWor      | 3480      | 1863     | 1857.4   | 1808     | 1842.8       | 52.95402299  |
+| YarsRevenge      | 16401.7   | 9363     | 10424    | 18850    | 12879        | 78.52234829  |
+| Zaxxon           | 6380      | 4319     | 4644     | 4559     | 4507.333333  | 70.64785789  |
 
-MyNew2文件夹下采用的vbn机制为
+| **性能区间**       | **游戏数量** |
+| ------------------ | ------------ |
+| 性能达到100%及以上 | 15           |
+| 性能达到95%-100%   | 0            |
+| 性能达到75%-95%    | 8            |
+| 性能达到50%-75%    | 12           |
+| 性能低于50%        | 15           |
 
-fc1有bn层
+## Ref
 
-1. collect reference: 在训练之前，采用随机策略来与环境进行交互，每一帧按照1%的概率被选入到reference frames set里，集合大小为128.
-2. 在forward的时候，先将reference frames set输入(bn模式)，计算reference mean and variance，再切换到vbn模式，在正常forward时，将当前帧的mean和var与reference mean、var做平均。
-
-## Note for implementation
-
-1. use numpy.random.normal instead of torch.randn_like
-2. create a new model when trying to get rewards
-
-
-### required package
-
-1. redis
-2. hiredis
-3. click
-4. torch(1.0)
-5. torchvision
-
-## Note
-
-Notice:
-
-1. multi-core
-2. with batch normalization
-3. use np.random.normal to represent torch.randn_like
-
-Please make sure OMP_NUM_THREADS=1
-or run 
-
-export OMP_NUM_THREADS=1
-
+[1] Salimans T, Ho J, Chen X, et al. Evolution Strategies as a Scalable Alternative to Reinforcement Learning.[J]. arXiv: Machine Learning, 2017.
